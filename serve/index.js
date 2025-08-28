@@ -8,7 +8,7 @@ const app = new Koa();
 const router = new Router();
 
 // 从环境变量获取X.com token和列表ID
-const X_TOKEN = process.env.PUBLIC_TOKEN;
+const X_TOKEN = process.env.PUBLIC_TOKEPUBLIC_TOKENN;
 const DEFAULT_LIST_ID = process.env.PUBLIC_X_LIST_ID;
 
 // 中间件
@@ -29,6 +29,8 @@ router.get('/', async (ctx) => {
 // 获取默认列表的推特数据
 router.get('/tweets', async (ctx) => {
   try {
+    console.log('X_TOKEN', X_TOKEN);
+    
     const data = await getListTweets(DEFAULT_LIST_ID, X_TOKEN);
     ctx.body = {
       success: true,
