@@ -1,7 +1,6 @@
 const axios = require("axios");
 
 async function getListTweets(
-  listId = process.env.PUBLIC_X_LIST_ID,
   token = process.env.PUBLIC_TOKEN
 ) {
   if (!token) {
@@ -9,11 +8,11 @@ async function getListTweets(
       "Token is required. Please provide token parameter or set PUBLIC_TOKEN environment variable."
     );
   }
-  const url = `https://api.x.com/2/lists/${listId}/tweets?max_results=200`;
+  const url = `https://rss.app/feeds/v1.1/8Ip2by1mveXm9llN.json`;
 
   try {
     const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      proxy: false,
     });
     return response.data;
   } catch (error) {
