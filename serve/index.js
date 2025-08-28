@@ -36,17 +36,6 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
 app.use(cors());
 app.use(bodyParser());
 
-// 路由定义
-router.get("/", async (ctx) => {
-  ctx.body = {
-    message: "数据采集服务已启动",
-    endpoints: {
-      "/tweets": "GET - 获取推特列表数据",
-      "/tweets/:listId": "GET - 获取指定列表的推特数据",
-    },
-  };
-});
-
 // 存储推特数据到 Supabase 的辅助函数
 async function storeTweetsToSupabase(tweets) {
   if (!supabase) {
@@ -118,7 +107,7 @@ async function storeTweetsToSupabase(tweets) {
 }
 
 // 获取默认列表的推特数据
-router.get("/tweets", async (ctx) => {
+router.get("/", async (ctx) => {
   try {
     console.log("X_LIST_ID", X_LIST_ID);
     console.log("X_TOKEN", X_TOKEN);
@@ -149,14 +138,6 @@ router.get("/tweets", async (ctx) => {
       timestamp: new Date().toISOString(),
     };
   }
-});
-
-// 健康检查端点
-router.get("/health", async (ctx) => {
-  ctx.body = {
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-  };
 });
 
 // 应用路由
