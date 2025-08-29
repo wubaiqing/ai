@@ -175,9 +175,9 @@ app.listen(PORT, () => {
   console.log(`   Vercel部署: npm run deploy`);
   console.log(`   查看部署文档: VERCEL_DEPLOY.md`);
   
-  // 启动定时任务：每分钟执行
-  cron.schedule('* * * * *', scheduledTweetCollection);
-  console.log('⏰ 定时任务已启动：每分钟执行一次推特数据采集');
+  // 启动定时任务：每小时的第0分钟执行
+  cron.schedule('0 * * * *', scheduledTweetCollection);
+  console.log('⏰ 定时任务已启动：每小时执行一次推特数据采集');
   
   // 服务启动时立即执行一次
   scheduledTweetCollection();
