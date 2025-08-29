@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  data-capture:
+    build: .
+    container_name: data-capture-app
+    ports:
+      - "8095:8095"
+    environment:
+      - NODE_ENV=production
+      - PORT=8095
+      - SCHEDULER_ENABLED=true
+      - CRON_EXPRESSION=0 * * * *  # 每小时执行一次
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data  # 数据持久化
+      - ./logs:/app/logs  # 日志持久化
+    networks:
+      - data-capture-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8095/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  data-capture-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

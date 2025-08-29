@@ -4,11 +4,11 @@
 
 ## ✨ 功能特性
 
-- 🔄 **自动定时采集**: 支持 Cron 表达式配置的定时任务
+- 🔄 **自动定时采集**: 基于 node-cron 的本地定时任务
 - 📊 **数据存储**: 集成 Supabase 数据库存储
 - 🚀 **RESTful API**: 提供完整的数据查询和管理接口
 - 🛡️ **模块化架构**: 清晰的代码结构，易于维护和扩展
-- ☁️ **云部署支持**: 支持 Vercel 无服务器部署
+- 🐳 **Docker 容器化**: 支持 Docker 容器部署，易于在 NAS 等环境中运行
 - 📝 **完整日志**: 详细的操作日志和错误处理
 
 ## 📁 项目结构
@@ -24,7 +24,8 @@ data-capture/
 │   ├── index.js          # 主服务器文件
 │   └── x.js              # 原始 Twitter 模块 (已重构)
 ├── .env.example          # 环境变量模板
-├── vercel.json           # Vercel 部署配置
+├── Dockerfile            # Docker 镜像配置
+├── docker-compose.yml    # Docker Compose 配置
 ├── package.json          # 项目依赖
 └── README.md             # 项目文档
 ```
@@ -50,7 +51,7 @@ cp .env.example .env
 ```env
 # X.com API 配置
 X_TOKEN=your_x_api_bearer_token
-PUBLIC_X_LIST_ID=your_x_list_id
+X_LIST_ID=your_x_list_id
 
 # Supabase 配置
 SUPABASE_URL=https://your-project.supabase.co
@@ -60,9 +61,7 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 PORT=3001
 NODE_ENV=development
 
-# 调度器配置
-CRON_EXPRESSION=0 * * * *  # 每小时执行一次
-SCHEDULER_ENABLED=true
+# 注意：定时任务现在通过 Vercel Cron 配置，无需本地调度器
 ```
 
 ### 3. 启动服务
@@ -77,11 +76,30 @@ npm start
 
 服务将在 `http://localhost:3001` 启动。
 
+### 4. Docker 部署（推荐）
+
+使用 Docker Compose 快速部署：
+
+```bash
+# 构建并启动容器
+docker-compose up -d
+
+# 查看容器状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+```
+
+服务将在 `http://localhost:8095` 启动。
+
+详细的 Docker 部署说明请参考 [DOCKER_DEPLOY.md](./DOCKER_DEPLOY.md)
+
 ## 📚 API 文档
 
 ### 基础信息
 
-- **Base URL**: `http://localhost:3001`
+- **Base URL**: `http://localhost:8095` (Docker) 或 `http://localhost:3001` (本地开发)
 - **Content-Type**: `application/json`
 
 ### 端点列表
@@ -97,10 +115,8 @@ GET /health
 {
   "status": "ok",
   "timestamp": "2024-01-20T10:30:00.000Z",
-  "config": {
-    "scheduler_enabled": true,
-    "cron_expression": "0 * * * *"
-  }
+  "deployment": "docker-container",
+  "scheduler": "node-cron"
 }
 ```
 
@@ -167,15 +183,22 @@ GET /
 | 变量名 | 必需 | 说明 | 示例 |
 |--------|------|------|------|
 | `X_TOKEN` | ✅ | X.com API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAEvF3QEA...` |
-| `PUBLIC_X_LIST_ID` | ✅ | X.com 列表 ID | `123456789` |
+| `X_LIST_ID` | ✅ | X.com 列表 ID | `123456789` |
 | `SUPABASE_URL` | ✅ | Supabase 项目 URL | `https://xxx.supabase.co` |
 | `SUPABASE_ANON_KEY` | ✅ | Supabase 匿名密钥 | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
-| `PORT` | ❌ | 服务器端口 | `3001` |
-| `NODE_ENV` | ❌ | 运行环境 | `development` |
-| `CRON_EXPRESSION` | ❌ | 定时任务表达式 | `0 * * * *` |
-| `SCHEDULER_ENABLED` | ❌ | 是否启用调度器 | `true` |
+| `PORT` | ❌ | 服务器端口 | `8095` (Docker) / `3001` (开发) |
+| `NODE_ENV` | ❌ | 运行环境 | `production` |
+| `SCHEDULER_ENABLED` | ❌ | 是否启用定时任务 | `true` |
+| `CRON_EXPRESSION` | ❌ | Cron 表达式 | `0 * * * *` |
 
-### Cron 表达式示例
+### 定时任务配置
+
+定时任务通过 `node-cron` 实现，可通过环境变量配置：
+
+```env
+SCHEDULER_ENABLED=true
+CRON_EXPRESSION=0 * * * *
+```
 
 | 表达式 | 说明 |
 |--------|------|
@@ -187,21 +210,35 @@ GET /
 
 ## 🚀 部署
 
-### Vercel 部署
+### Docker 部署（推荐）
 
-1. 安装 Vercel CLI:
+1. 配置环境变量：
 ```bash
-npm i -g vercel
+cp .env.example .env
+# 编辑 .env 文件，填入必要配置
 ```
 
-2. 部署到 Vercel:
+2. 使用 Docker Compose 部署：
 ```bash
-npm run deploy
+docker-compose up -d
 ```
 
-3. 在 Vercel 控制台配置环境变量
+3. 验证部署：
+```bash
+curl http://localhost:8095/health
+```
 
-详细部署说明请参考 [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)
+详细部署说明请参考 [DOCKER_DEPLOY.md](./DOCKER_DEPLOY.md)
+
+### 本地开发部署
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
 
 ## 🛠️ 开发
 
@@ -214,17 +251,17 @@ npm run dev
 # 生产模式
 npm start
 
-# 构建项目
-npm run build
+# 构建 Docker 镜像
+npm run docker:build
 
-# Vercel 构建
-npm run vercel-build
+# 运行 Docker 容器
+npm run docker:run
 
-# 部署到 Vercel
-npm run deploy
+# 使用 Docker Compose
+npm run docker:compose
 
-# 部署到 Vercel 开发环境
-npm run deploy-dev
+# 停止 Docker 服务
+npm run docker:stop
 
 # 运行测试
 npm test
@@ -252,11 +289,13 @@ npm test
 
 3. **X.com API 访问失败**
    - 确认 `X_TOKEN` 是否有效
-   - 检查 `PUBLIC_X_LIST_ID` 是否存在且可访问
+   - 检查 `X_LIST_ID` 是否存在且可访问
 
 4. **定时任务不执行**
-   - 检查 `SCHEDULER_ENABLED` 是否为 `true`
-   - 验证 `CRON_EXPRESSION` 格式是否正确
+   - 确认 `SCHEDULER_ENABLED=true`
+   - 检查 `CRON_EXPRESSION` 格式是否正确
+   - 查看容器日志中的定时任务启动信息
+   - 验证容器是否正常运行
 
 ### 日志查看
 
@@ -279,4 +318,4 @@ MIT License
 如有问题，请通过以下方式联系：
 - 提交 GitHub Issue
 - 查看项目文档
-- 参考 [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md) 部署指南
+- 参考 [DOCKER_DEPLOY.md](./DOCKER_DEPLOY.md) 部署指南

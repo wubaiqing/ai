@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node serve/index.js",
     "dev": "node serve/index.js",
-    "build": "echo \"Build completed for Vercel deployment\"",
-    "vercel-build": "echo \"Vercel build process completed\"",
-    "deploy": "vercel --prod",
-    "deploy-dev": "vercel",
+    "docker:build": "docker build -t data-capture .",
+    "docker:run": "docker run -p 8095:8095 --env-file .env data-capture",
+    "docker:compose": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -27,6 +27,6 @@
     "koa-bodyparser": "^4.4.1",
     "koa-cors": "^0.0.16",
     "koa-router": "^12.0.1",
-    "node-cron": "^4.2.1"
+    "node-cron": "^3.0.3"
   }
 }

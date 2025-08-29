@@ -8,7 +8,7 @@
 
 - **数据采集**: 从指定的 X.com 列表获取推文数据
 - **数据存储**: 将采集的数据存储到 Supabase 数据库
-- **定时任务**: 支持定时自动采集数据
+- **定时任务**: 基于 Vercel Cron 的云端定时任务
 - **API 接口**: 提供 RESTful API 用于数据查询和管理
 - **模块化架构**: 清晰的代码结构，易于维护和扩展
 
@@ -19,7 +19,7 @@
 - **数据库**: Supabase (PostgreSQL)
 - **部署平台**: Vercel
 - **数据源**: X.com (Twitter) RSS Feed
-- **定时任务**: node-cron
+- **定时任务**: Vercel Cron
 
 ## 部署前准备
 
@@ -116,11 +116,10 @@ data-capture/
 5. 添加以下变量：
 
    - `X_TOKEN`: 您的 X.com Bearer Token
-   - `PUBLIC_X_LIST_ID`: X.com 列表 ID
+   - `X_LIST_ID`: X.com 列表 ID
    - `SUPABASE_URL`: Supabase 项目 URL
    - `SUPABASE_ANON_KEY`: Supabase 匿名密钥
-   - `CRON_EXPRESSION`: 定时任务表达式（可选）
-   - `SCHEDULER_ENABLED`: 是否启用调度器（可选）
+
 
 6. **部署**
    - 点击 "Deploy" 开始部署
@@ -134,7 +133,7 @@ data-capture/
 | 变量名              | 描述                   | 示例值                             |
 | ------------------- | ---------------------- | ---------------------------------- |
 | `X_TOKEN`           | X.com API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAEvF3QEA...`  |
-| `PUBLIC_X_LIST_ID`  | X.com 列表 ID          | `123456789`                        |
+| `X_LIST_ID`  | X.com 列表 ID          | `123456789`                        |
 | `SUPABASE_URL`      | Supabase 项目 URL      | `https://your-project.supabase.co` |
 | `SUPABASE_ANON_KEY` | Supabase 匿名密钥      | `eyJhbGciOiJIUzI1NiIsInR5cCI6...`  |
 
@@ -144,8 +143,60 @@ data-capture/
 | ------------------- | -------------- | ------------ |
 | `PORT`              | 服务器端口     | `3001`       |
 | `NODE_ENV`          | 运行环境       | `production` |
-| `CRON_EXPRESSION`   | 定时任务表达式 | `0 * * * *`  |
-| `SCHEDULER_ENABLED` | 是否启用调度器 | `true`       |
+
+
+## Vercel Cron 配置
+
+本项目使用 Vercel Cron 功能实现定时任务，无需本地调度器。定时任务配置在 `vercel.json` 文件中：
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "serve/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/serve/index.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/collect",
+      "schedule": "0 * * * *"
+    }
+  ],
+  "env": {
+    "X_TOKEN": "@x_token"
+  },
+  "functions": {
+    "serve/index.js": {
+      "maxDuration": 30
+    }
+  }
+}
+```
+
+### Cron 调度说明
+
+- **路径**: `/collect` - 定时触发的 API 端点
+- **频率**: `0 * * * *` - 每小时执行一次
+- **执行方式**: Vercel 会自动调用指定的 API 端点
+- **监控**: 可在 Vercel Dashboard 中查看 Cron 任务执行状态
+
+### 常用 Cron 表达式
+
+| 表达式 | 说明 |
+|--------|------|
+| `0 * * * *` | 每小时执行一次 |
+| `*/30 * * * *` | 每30分钟执行一次 |
+| `0 */6 * * *` | 每6小时执行一次 |
+| `0 9 * * *` | 每天上午9点执行 |
+| `0 9 * * 1-5` | 工作日上午9点执行 |
 
 ## API 端点
 
@@ -164,8 +215,8 @@ GET /health
   "status": "ok",
   "timestamp": "2024-01-20T10:30:00.000Z",
   "config": {
-    "scheduler_enabled": true,
-    "cron_expression": "0 * * * *"
+    "deployment_mode": "vercel_cron",
+    "cron_schedule": "0 * * * *"
   }
 }
 ```
@@ -241,7 +292,7 @@ GET /
 
    ```bash
    cp .env.example .env
-   # 编辑 .env 文件，添加你的 PUBLIC_TOKEN 和 PUBLIC_X_LIST_ID
+   # 编辑 .env 文件，添加你的 X_TOKEN 和 X_LIST_ID
    ```
 
 3. **启动本地服务器**
@@ -277,7 +328,7 @@ GET /
    - 检查 X.com 列表 ID 是否正确
    - 验证 RSS Feed 是否可访问
    - 查看服务器日志
-   - 确认定时任务配置是否正确
+   - 确认 Vercel Cron 配置是否正确
 
 4. **模块化相关问题**
 
@@ -336,7 +387,7 @@ GET /
 
 1. **环境变量安全**
 
-   - 永远不要将 `X_TOKEN` 和 `PUBLIC_X_LIST_ID` 提交到代码仓库
+   - 永远不要将 `X_TOKEN` 和 `X_LIST_ID` 提交到代码仓库
    - 使用 Vercel 的环境变量功能安全存储敏感信息
    - 定期轮换 API tokens
    - 确保列表 ID 不包含敏感信息
