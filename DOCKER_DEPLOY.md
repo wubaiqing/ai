@@ -29,7 +29,7 @@
 
 ```bash
 git clone <repository-url>
-cd data-capture
+cd tweets
 ```
 
 ### 2. 配置环境变量
@@ -77,40 +77,40 @@ docker-compose logs -f
 
 ```bash
 # 构建镜像
-docker build -t data-capture .
+docker build -t tweets .
 
 # 运行容器
 docker run -d \
-  --name data-capture-app \
+  --name tweets-app \
   -p 8095:8095 \
   --env-file .env \
   --restart unless-stopped \
-  data-capture
+  tweets
 ```
 
 ## 配置说明
 
 ### 环境变量
 
-| 变量名 | 必需 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `SUPABASE_URL` | ✅ | - | Supabase 项目 URL |
-| `SUPABASE_ANON_KEY` | ✅ | - | Supabase 匿名密钥 |
-| `X_LIST_ID` | ✅ | - | Twitter 列表 ID |
-| `X_TOKEN` | ✅ | - | Twitter API Token |
-| `PORT` | ❌ | 8095 | 服务器端口 |
-| `NODE_ENV` | ❌ | production | 运行环境 |
-| `SCHEDULER_ENABLED` | ❌ | true | 是否启用定时任务 |
-| `CRON_EXPRESSION` | ❌ | 0 * * * * | Cron 表达式 |
+| 变量名              | 必需 | 默认值        | 说明              |
+| ------------------- | ---- | ------------- | ----------------- |
+| `SUPABASE_URL`      | ✅   | -             | Supabase 项目 URL |
+| `SUPABASE_ANON_KEY` | ✅   | -             | Supabase 匿名密钥 |
+| `X_LIST_ID`         | ✅   | -             | Twitter 列表 ID   |
+| `X_TOKEN`           | ✅   | -             | Twitter API Token |
+| `PORT`              | ❌   | 8095          | 服务器端口        |
+| `NODE_ENV`          | ❌   | production    | 运行环境          |
+| `SCHEDULER_ENABLED` | ❌   | true          | 是否启用定时任务  |
+| `CRON_EXPRESSION`   | ❌   | 0 \* \* \* \* | Cron 表达式       |
 
 ### Cron 表达式示例
 
-| 表达式 | 说明 |
-|--------|------|
-| `0 * * * *` | 每小时执行一次 |
-| `0 */2 * * *` | 每2小时执行一次 |
-| `0 0 * * *` | 每天午夜执行一次 |
-| `0 0 */3 * *` | 每3天执行一次 |
+| 表达式         | 说明             |
+| -------------- | ---------------- |
+| `0 * * * *`    | 每小时执行一次   |
+| `0 */2 * * *`  | 每2小时执行一次  |
+| `0 0 * * *`    | 每天午夜执行一次 |
+| `0 0 */3 * *`  | 每3天执行一次    |
 | `*/30 * * * *` | 每30分钟执行一次 |
 
 ### Docker Compose 配置
@@ -127,11 +127,13 @@ docker run -d \
 ## API 端点
 
 ### 健康检查
+
 ```
 GET http://localhost:8095/health
 ```
 
 响应示例：
+
 ```json
 {
   "status": "ok",
@@ -142,19 +144,23 @@ GET http://localhost:8095/health
 ```
 
 ### 获取推特数据
+
 ```
 GET http://localhost:8095/tweets?limit=100
 ```
 
 ### 手动触发数据收集
+
 ```
 POST http://localhost:8095/collect
 ```
 
 ### 根路径
+
 ```
 GET http://localhost:8095/
 ```
+
 重定向到健康检查端点。
 
 ## 管理命令
@@ -188,10 +194,10 @@ docker-compose down
 docker-compose restart
 
 # 查看日志
-docker-compose logs -f data-capture
+docker-compose logs -f tweets
 
 # 进入容器
-docker-compose exec data-capture sh
+docker-compose exec tweets sh
 ```
 
 ### 使用 Docker 命令
@@ -201,16 +207,16 @@ docker-compose exec data-capture sh
 docker ps
 
 # 查看容器日志
-docker logs -f data-capture-app
+docker logs -f tweets-app
 
 # 进入容器
-docker exec -it data-capture-app sh
+docker exec -it tweets-app sh
 
 # 停止容器
-docker stop data-capture-app
+docker stop tweets-app
 
 # 删除容器
-docker rm data-capture-app
+docker rm tweets-app
 ```
 
 ## 数据持久化
@@ -229,13 +235,15 @@ docker rm data-capture-app
 #### 1. 容器无法启动
 
 **检查步骤：**
+
 - 确认 `.env` 文件存在且配置正确
 - 检查端口 8095 是否被占用
-- 查看容器日志：`docker-compose logs data-capture`
+- 查看容器日志：`docker-compose logs tweets`
 
 #### 2. 定时任务不执行
 
 **检查步骤：**
+
 - 确认 `SCHEDULER_ENABLED=true`
 - 检查 `CRON_EXPRESSION` 格式是否正确
 - 查看应用日志中的定时任务启动信息
@@ -243,6 +251,7 @@ docker rm data-capture-app
 #### 3. API 调用失败
 
 **检查步骤：**
+
 - 确认容器正在运行：`docker ps`
 - 测试健康检查端点：`curl http://localhost:8095/health`
 - 检查网络连接和防火墙设置
@@ -250,6 +259,7 @@ docker rm data-capture-app
 #### 4. 数据收集失败
 
 **检查步骤：**
+
 - 验证 Twitter API 配置（`X_LIST_ID`, `X_TOKEN`）
 - 验证 Supabase 配置（`SUPABASE_URL`, `SUPABASE_ANON_KEY`）
 - 检查网络连接
@@ -258,18 +268,20 @@ docker rm data-capture-app
 ### 调试技巧
 
 #### 查看详细日志
+
 ```bash
 # 实时查看日志
-docker-compose logs -f data-capture
+docker-compose logs -f tweets
 
 # 查看最近的日志
-docker-compose logs --tail=100 data-capture
+docker-compose logs --tail=100 tweets
 ```
 
 #### 进入容器调试
+
 ```bash
 # 进入运行中的容器
-docker-compose exec data-capture sh
+docker-compose exec tweets sh
 
 # 在容器内检查环境变量
 env | grep -E "(SUPABASE|X_|PORT|CRON)"
@@ -279,6 +291,7 @@ wget -qO- http://localhost:8095/health
 ```
 
 #### 重新构建镜像
+
 ```bash
 # 强制重新构建
 docker-compose build --no-cache
@@ -293,7 +306,7 @@ docker-compose up -d
 
 ```yaml
 services:
-  data-capture:
+  tweets:
     # ... 其他配置
     deploy:
       resources:
@@ -311,13 +324,13 @@ services:
 
 ```yaml
 services:
-  data-capture:
+  tweets:
     # ... 其他配置
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 ```
 
 ## 安全考虑
@@ -352,10 +365,10 @@ services:
 
 ```bash
 # 监控错误日志
-docker-compose logs data-capture | grep -i error
+docker-compose logs tweets | grep -i error
 
 # 监控定时任务执行
-docker-compose logs data-capture | grep "定时任务执行"
+docker-compose logs tweets | grep "定时任务执行"
 ```
 
 ### 备份策略

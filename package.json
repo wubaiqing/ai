@@ -1,15 +1,17 @@
 {
-  "name": "data-capture",
+  "name": "tweets",
   "version": "1.0.0",
   "description": "数据采集项目",
   "main": "serve/index.js",
   "scripts": {
     "start": "node serve/index.js",
     "dev": "node serve/index.js",
-    "docker:build": "docker build -t data-capture .",
-    "docker:run": "docker run -p 8095:8095 --env-file .env data-capture",
+    "docker:build": "docker build -t tweets .",
+    "docker:run": "docker run -p 8095:8095 --env-file .env tweets",
     "docker:compose": "docker-compose up -d",
     "docker:stop": "docker-compose down",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -28,5 +30,8 @@
     "koa-cors": "^0.0.16",
     "koa-router": "^12.0.1",
     "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0"
   }
 }

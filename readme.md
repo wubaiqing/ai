@@ -14,7 +14,7 @@
 ## 📁 项目结构
 
 ```
-data-capture/
+tweets/
 ├── lib/                    # 核心库文件
 │   ├── config.js          # 配置管理
 │   ├── database.js        # 数据库操作
@@ -111,6 +111,7 @@ GET /health
 ```
 
 **响应示例**:
+
 ```json
 {
   "status": "ok",
@@ -127,9 +128,11 @@ GET /tweets?limit=100
 ```
 
 **查询参数**:
+
 - `limit` (可选): 返回数据条数，默认 100
 
 **响应示例**:
+
 ```json
 {
   "success": true,
@@ -155,6 +158,7 @@ POST /collect
 ```
 
 **响应示例**:
+
 ```json
 {
   "success": true,
@@ -180,16 +184,16 @@ GET /
 
 ### 环境变量
 
-| 变量名 | 必需 | 说明 | 示例 |
-|--------|------|------|------|
-| `X_TOKEN` | ✅ | X.com API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAEvF3QEA...` |
-| `X_LIST_ID` | ✅ | X.com 列表 ID | `123456789` |
-| `SUPABASE_URL` | ✅ | Supabase 项目 URL | `https://xxx.supabase.co` |
-| `SUPABASE_ANON_KEY` | ✅ | Supabase 匿名密钥 | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
-| `PORT` | ❌ | 服务器端口 | `8095` (Docker) / `3001` (开发) |
-| `NODE_ENV` | ❌ | 运行环境 | `production` |
-| `SCHEDULER_ENABLED` | ❌ | 是否启用定时任务 | `true` |
-| `CRON_EXPRESSION` | ❌ | Cron 表达式 | `0 * * * *` |
+| 变量名              | 必需 | 说明                   | 示例                              |
+| ------------------- | ---- | ---------------------- | --------------------------------- |
+| `X_TOKEN`           | ✅   | X.com API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAEvF3QEA...` |
+| `X_LIST_ID`         | ✅   | X.com 列表 ID          | `123456789`                       |
+| `SUPABASE_URL`      | ✅   | Supabase 项目 URL      | `https://xxx.supabase.co`         |
+| `SUPABASE_ANON_KEY` | ✅   | Supabase 匿名密钥      | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
+| `PORT`              | ❌   | 服务器端口             | `8095` (Docker) / `3001` (开发)   |
+| `NODE_ENV`          | ❌   | 运行环境               | `production`                      |
+| `SCHEDULER_ENABLED` | ❌   | 是否启用定时任务       | `true`                            |
+| `CRON_EXPRESSION`   | ❌   | Cron 表达式            | `0 * * * *`                       |
 
 ### 定时任务配置
 
@@ -200,30 +204,33 @@ SCHEDULER_ENABLED=true
 CRON_EXPRESSION=0 * * * *
 ```
 
-| 表达式 | 说明 |
-|--------|------|
-| `0 * * * *` | 每小时执行一次 |
-| `*/30 * * * *` | 每30分钟执行一次 |
-| `0 */6 * * *` | 每6小时执行一次 |
-| `0 9 * * *` | 每天上午9点执行 |
-| `0 9 * * 1-5` | 工作日上午9点执行 |
+| 表达式         | 说明              |
+| -------------- | ----------------- |
+| `0 * * * *`    | 每小时执行一次    |
+| `*/30 * * * *` | 每30分钟执行一次  |
+| `0 */6 * * *`  | 每6小时执行一次   |
+| `0 9 * * *`    | 每天上午9点执行   |
+| `0 9 * * 1-5`  | 工作日上午9点执行 |
 
 ## 🚀 部署
 
 ### Docker 部署（推荐）
 
 1. 配置环境变量：
+
 ```bash
 cp .env.example .env
 # 编辑 .env 文件，填入必要配置
 ```
 
 2. 使用 Docker Compose 部署：
+
 ```bash
 docker-compose up -d
 ```
 
 3. 验证部署：
+
 ```bash
 curl http://localhost:8095/health
 ```
@@ -300,6 +307,7 @@ npm test
 ### 日志查看
 
 服务运行时会输出详细的日志信息，包括：
+
 - 服务启动信息
 - 定时任务执行状态
 - API 请求和响应
@@ -316,6 +324,7 @@ MIT License
 ## 📞 支持
 
 如有问题，请通过以下方式联系：
+
 - 提交 GitHub Issue
 - 查看项目文档
 - 参考 [DOCKER_DEPLOY.md](./DOCKER_DEPLOY.md) 部署指南
