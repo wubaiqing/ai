@@ -7,6 +7,7 @@ const bodyParser = require("koa-bodyparser");
 const cors = require("koa-cors");
 const { createClient } = require("@supabase/supabase-js");
 const { getListTweets } = require("./x.js");
+const cron = require('node-cron');
 
 const app = new Koa();
 const router = new Router();
@@ -70,7 +71,6 @@ async function storeTweetsToSupabase(tweets) {
         }
 
         if (existingData) {
-          console.log(`跳过重复 URL: ${item.url}`);
           skipped++;
           continue;
         }
@@ -149,6 +149,18 @@ app.on("error", (err, ctx) => {
   console.error("服务器错误:", err);
 });
 
+// 定时任务：每小时执行一次推特数据采集
+async function scheduledTweetCollection() {
+  try {
+    console.log('🕐 开始定时采集推特数据...');
+    const data = await getListTweets(X_LIST_ID, X_TOKEN);
+    const storageResult = await storeTweetsToSupabase(data);
+    console.log(`✅ 定时采集完成 - 存储: ${storageResult.stored}, 跳过: ${storageResult.skipped}, 错误: ${storageResult.errors}`);
+  } catch (error) {
+    console.error('❌ 定时采集失败:', error.message);
+  }
+}
+
 // 启动服务器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
@@ -162,6 +174,13 @@ app.listen(PORT, () => {
   console.log(`   本地开发: npm run dev`);
   console.log(`   Vercel部署: npm run deploy`);
   console.log(`   查看部署文档: VERCEL_DEPLOY.md`);
+  
+  // 启动定时任务：每分钟执行
+  cron.schedule('* * * * *', scheduledTweetCollection);
+  console.log('⏰ 定时任务已启动：每分钟执行一次推特数据采集');
+  
+  // 服务启动时立即执行一次
+  scheduledTweetCollection();
 });
 
 // 导出app以支持测试
