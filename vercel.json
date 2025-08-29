@@ -2,33 +2,21 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.js",
+      "src": "serve/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/tweets",
-      "dest": "/api/tweets.js"
-    },
-    {
-      "src": "/tweets/(.*)",
-      "dest": "/api/tweets/[listId].js?listId=$1"
-    },
-    {
-      "src": "/health",
-      "dest": "/api/health.js"
+      "src": "/(.*)",
+      "dest": "/serve/index.js"
     }
   ],
   "env": {
     "X_TOKEN": "@x_token"
   },
   "functions": {
-    "api/**/*.js": {
+    "serve/index.js": {
       "maxDuration": 30
     }
   }

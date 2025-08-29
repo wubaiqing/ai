@@ -1,11 +1,11 @@
 const axios = require("axios");
 
 async function getListTweets(
-  token = process.env.PUBLIC_TOKEN
+  token = process.env.X_TOKEN
 ) {
   if (!token) {
     throw new Error(
-      "Token is required. Please provide token parameter or set PUBLIC_TOKEN environment variable."
+      "Token is required. Please provide token parameter or set X_TOKEN environment variable."
     );
   }
   const url = `https://rss.app/feeds/v1.1/8Ip2by1mveXm9llN.json`;
