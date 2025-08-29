@@ -33,6 +33,9 @@ Thumbs.db
 dist/
 build/
 
+# Test coverage reports
+coverage/
+
 # Vercel
 .vercel
 
