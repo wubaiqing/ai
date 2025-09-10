@@ -1,30 +1,41 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
-async function scrapeXList(listId, tweetCount = 10) {
+async function scrapeXListWithLogin(listId, tweetCount = 10) {
   const url = `https://x.com/i/lists/${listId}`;
 
   const browser = await puppeteer.launch({
-    headless: true, // 改成 false 可以观察浏览器执行过程
+    headless: true, // 改成 false 可以观察浏览器过程
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
   const page = await browser.newPage();
 
-  // 设置 UA 避免被识别为机器人
+  // 设置 User-Agent
   await page.setUserAgent(
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
       'AppleWebKit/537.36 (KHTML, like Gecko) ' +
       'Chrome/135.0.0.0 Safari/537.36'
   );
 
+  // 读取 cookies.json 并设置
+  const cookiesPath = path.resolve(__dirname, 'cookies.json');
+  if (!fs.existsSync(cookiesPath)) {
+    throw new Error('未找到 cookies.json，请先导出 X 登录 cookie');
+  }
+
+  const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'));
+  await page.setCookie(...cookies);
+
   console.log(`正在打开 ${url} ...`);
   await page.goto(url, { waitUntil: 'networkidle2' });
 
-  // 等待推文元素加载
+  // 等待推文加载
   await page.waitForSelector('article [data-testid="tweetText"]', {
     timeout: 20000,
   });
 
-  // 滚动页面，加载更多内容
+  // 滚动并收集推文
   let collected = [];
   while (collected.length < tweetCount) {
     const tweets = await page.$$eval(
@@ -47,7 +58,7 @@ async function scrapeXList(listId, tweetCount = 10) {
 }
 
 // 示例调用
-scrapeXList('1234567890123456789', 5)
+scrapeXListWithLogin('1234567890123456789', 5)
   .then(tweets => {
     console.log('获取到的推文：');
     console.log(tweets);
