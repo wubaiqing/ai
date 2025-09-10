@@ -1,0 +1,24 @@
+[
+  { "name": "dnt", "value": "1" },
+  { "name": "__cuid", "value": "eab8b2ce8bad473880dc35a31fad5754" },
+  { "name": "guest_id", "value": "v1%3A175437990689884002" },
+  { "name": "guest_id_marketing", "value": "v1%3A175437990689884002" },
+  { "name": "guest_id_ads", "value": "v1%3A175437990689884002" },
+  { "name": "g_state", "value": "{\"i_l\":0}" },
+  { "name": "personalization_id", "value": "\"v1_CsbA93wPVY+seKTbzTN30Q==\"" },
+  {
+    "name": "ct0",
+    "value": "c50e1eadac82e392c35cd709f053f8ca0b6913dd14ca45794dd4ba148e9206bcfca89331431b0afe71567ca2a211909708946050afd9ae2f4b638f066f62b8936767a59e942ecd2daa46a4bcfac7f95c"
+  },
+  { "name": "twid", "value": "u%3D1903008629093253120" },
+  { "name": "des_opt_in", "value": "Y" },
+  {
+    "name": "ph_phc_TXdpocbGVeZVm5VJmAsHTMrCofBQu3e0kN8HGMNGTVW_posthog",
+    "value": "%7B%22distinct_id%22%3A%2201987e30-7f8a-79a1-8b6d-dfa98e92502d%22%2C%22%24sesid%22%3A%5B1756377437564%2C%220198f02d-a99b-7ffe-aad4-608abbe4f6db%22%2C1756376181147%5D%7D"
+  },
+  { "name": "lang", "value": "en" },
+  {
+    "name": "external_referer",
+    "value": "padhuUp37zj9xuUOXCNFvJEaPb7vKkpn|0|8e8t2xd8A2w%3D"
+  }
+]
