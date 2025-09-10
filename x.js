@@ -25,7 +25,7 @@ async function scrapeXListWithLogin(listId, tweetCount = 10) {
   }
 
   const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'));
-  await page.context().addCookies(cookies);
+  await page.setCookie(...cookies);
 
   console.log(`正在打开 ${url} ...`);
   await page.goto(url, { waitUntil: 'networkidle2' });
