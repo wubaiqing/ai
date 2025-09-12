@@ -11,6 +11,102 @@ const fs = require("fs");
 const path = require("path");
 const applicationConfig = require("../lib/config");
 const { storeTweetDataToSupabase } = require("../lib/database");
+
+/**
+ * 处理页面中的'Show more'按钮，点击展开完整推文内容
+ * 只点击主推文中的蓝色'Show more'按钮，不点击引用推文中的按钮
+ * @param {Object} page - Puppeteer页面对象
+ */
+async function handleShowMoreButtons(page) {
+  try {
+    let buttonsClicked = 0;
+    
+    // 使用页面评估来查找和点击主推文中的'Show more'按钮
+    const clickedCount = await page.evaluate(() => {
+      let clicked = 0;
+      
+      // 查找所有文章元素（每个推文都在article标签内）
+      const articles = document.querySelectorAll('article');
+      
+      articles.forEach(article => {
+        // 检查是否为引用推文（quoted tweet）
+        // 引用推文通常在特定的容器内，具有特定的data-testid或类名
+        const isQuotedTweet = article.querySelector('[data-testid="quoteTweet"]') || 
+                             article.closest('[data-testid="quoteTweet"]') ||
+                             article.querySelector('.css-175oi2r[role="blockquote"]') ||
+                             article.closest('.css-175oi2r[role="blockquote"]');
+        
+        // 如果是引用推文，跳过处理
+        if (isQuotedTweet) {
+          return;
+        }
+        
+        // 在主推文中查找'Show more'按钮
+        const showMoreSelectors = [
+          '[data-testid="tweet-text-show-more-link"]',
+          'span[style*="color: rgb(29, 155, 240)"]', // 蓝色文本
+          'span[style*="color: rgb(29,155,240)"]',   // 蓝色文本（无空格）
+          'a[role="link"] span',
+          '[role="button"] span'
+        ];
+        
+        const showMoreTexts = ['Show more', '显示更多'];
+        
+        showMoreSelectors.forEach(selector => {
+          const elements = article.querySelectorAll(selector);
+          elements.forEach(element => {
+            const text = element.textContent?.trim();
+            if (text && showMoreTexts.some(showText => text === showText)) {
+              // 检查元素是否可见且为蓝色
+              const rect = element.getBoundingClientRect();
+              const computedStyle = window.getComputedStyle(element);
+              const color = computedStyle.color;
+              
+              // 检查是否为蓝色（Twitter的蓝色通常是rgb(29, 155, 240)）
+              const isBlueColor = color.includes('29, 155, 240') || 
+                                color.includes('rgb(29,155,240)') ||
+                                color.includes('#1d9bf0');
+              
+              if (rect.width > 0 && rect.height > 0 && isBlueColor) {
+                try {
+                  // 尝试点击元素或其父级可点击元素
+                  let clickTarget = element;
+                  while (clickTarget && clickTarget !== document.body) {
+                    if (clickTarget.tagName === 'A' || 
+                        clickTarget.getAttribute('role') === 'button' || 
+                        clickTarget.getAttribute('role') === 'link' ||
+                        clickTarget.onclick) {
+                      clickTarget.click();
+                      clicked++;
+                      console.log(`点击了主推文中的'Show more'按钮: ${text}`);
+                      return; // 找到并点击后退出
+                    }
+                    clickTarget = clickTarget.parentElement;
+                  }
+                } catch (e) {
+                  console.log(`点击'Show more'按钮失败: ${e.message}`);
+                }
+              }
+            }
+          });
+        });
+      });
+      
+      return clicked;
+    });
+    
+    buttonsClicked = clickedCount;
+    
+    if (buttonsClicked > 0) {
+      console.log(`成功点击 ${buttonsClicked} 个主推文中的'Show more'按钮`);
+      // 等待页面内容完全展开
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  } catch (error) {
+    console.log(`处理'Show more'按钮时出错: ${error.message}`);
+    // 错误不影响主流程，继续执行
+  }
+}
 const APPLICATION_CONFIG = {
   CHROME_EXECUTABLE_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   COOKIES_FILE_PATH: "../cookies.json",
@@ -123,17 +219,47 @@ async function scrapeTwitterListWithAuthentication(
 
   while (currentScrollCount < maxScrollCount) {
     // 获取当前页面上的所有推文
+    // 首先处理所有可能的'Show more'按钮
+    await handleShowMoreButtons(webPage);
+
+    // 添加调试信息，检查页面上的推文元素
+    const articleCount = await webPage.$$eval("article", articles => articles.length);
+    console.log(`页面上找到 ${articleCount} 个article元素`);
+    
+    if (articleCount === 0) {
+      // 如果没有找到article元素，尝试其他可能的选择器
+      const alternativeSelectors = [
+        '[data-testid="tweet"]',
+        '[data-testid="cellInnerDiv"]',
+        '[role="article"]'
+      ];
+      
+      for (const selector of alternativeSelectors) {
+        const count = await webPage.$$eval(selector, elements => elements.length);
+        console.log(`选择器 ${selector} 找到 ${count} 个元素`);
+      }
+    }
 
     const currentPageTweets = await webPage.$$eval("article", (articleNodes) =>
       articleNodes.map((articleElement) => {
         const tweetTextElement = articleElement.querySelector('[data-testid="tweetText"]');
         const tweetLinkElement = articleElement.querySelector('a[href*="/status/"]');
+        
+        // 添加调试信息
+        const hasText = !!tweetTextElement;
+        const hasLink = !!tweetLinkElement;
+        const content = tweetTextElement ? tweetTextElement.innerText.trim() : "";
+        const url = tweetLinkElement ? tweetLinkElement.href : "";
+        
+        // 在浏览器控制台输出调试信息
+        console.log(`推文调试: hasText=${hasText}, hasLink=${hasLink}, content长度=${content.length}, url=${url}`);
+        
         return {
-          content: tweetTextElement ? tweetTextElement.innerText.trim() : "",
-          url: tweetLinkElement ? tweetLinkElement.href : "",
-        };
-      })
-    );
+           content: content,
+           url: url,
+         };
+       })
+     );
     // 合并新推文并去重（基于URL字段进行正确的去重）
     const beforeMergeCount = collectedTweets.length;
     const newTweetsCount = currentPageTweets.length;
@@ -236,7 +362,7 @@ async function scrapeTwitterListWithAuthentication(
  */
 async function executeTwitterScrapingTask() {
   const defaultListId = "1950374938378113192"; // 默认推特列表ID
-  const testScrollCount = 30; // 测试环境使用较小的滚动次数
+  const testScrollCount = 100; // 测试环境使用较小的滚动次数
 
   try {
     console.log("=== Twitter推文爬取服务启动 ===");
