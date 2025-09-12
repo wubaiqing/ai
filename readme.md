@@ -140,7 +140,6 @@ GET /tweets?limit=100
     {
       "id": 1,
       "url": "https://twitter.com/user/status/123",
-      "title": "推特标题",
       "content": "推特内容",
       "published_date": "2024-01-20T10:00:00.000Z",
       "created_at": "2024-01-20T10:30:00.000Z"
