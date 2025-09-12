@@ -9,19 +9,18 @@ require("dotenv").config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
-const { storeTweetsToSupabase } = require("../lib/database");
-
-// 配置常量
-const CONFIG = {
-  CHROME_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  COOKIES_FILE: "../cookies.json",
-  DEFAULT_MAX_SCROLLS: 100,
-  SCROLL_TIMEOUT: 20000,
-  NO_NEW_TWEETS_LIMIT: 5,
-  RANDOM_SCROLL_MIN: 300,
-  RANDOM_SCROLL_MAX: 600,
-  WAIT_TIME_MIN: 1500,
-  WAIT_TIME_MAX: 2500,
+const applicationConfig = require("../lib/config");
+const { storeTweetDataToSupabase } = require("../lib/database");
+const APPLICATION_CONFIG = {
+  CHROME_EXECUTABLE_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  COOKIES_FILE_PATH: "../cookies.json",
+  DEFAULT_MAX_SCROLL_COUNT: 100,
+  PAGE_LOAD_TIMEOUT: 20000,
+  CONSECUTIVE_EMPTY_SCROLL_LIMIT: 5,
+  SCROLL_HEIGHT_MIN: 300,
+  SCROLL_HEIGHT_MAX: 600,
+  SCROLL_DELAY_MIN: 1500,
+  SCROLL_DELAY_MAX: 2500,
 };
 
 /**
@@ -30,21 +29,21 @@ const CONFIG = {
  * @param {number} maxScrolls - 最大滚动次数，默认 100
  * @returns {Promise<Array>} 推文数据数组
  */
-async function scrapeXListWithLogin(
+async function scrapeTwitterListWithAuthentication(
   listId,
-  maxScrolls = CONFIG.DEFAULT_MAX_SCROLLS
+  maxScrollCount = APPLICATION_CONFIG.DEFAULT_MAX_SCROLL_COUNT
 ) {
   if (!listId) {
     throw new Error("列表 ID 不能为空");
   }
 
-  const url = `https://x.com/i/lists/${listId}`;
-  console.log(`开始爬取列表: ${listId}`);
+  const targetUrl = `https://x.com/i/lists/${listId}`;
+  console.log(`开始爬取推特列表: ${listId}`);
 
-  // 启动浏览器
-  const browser = await puppeteer.launch({
+  // 启动浏览器实例
+  const browserInstance = await puppeteer.launch({
     headless: false,
-    executablePath: CONFIG.CHROME_PATH,
+    executablePath: APPLICATION_CONFIG.CHROME_EXECUTABLE_PATH,
     defaultViewport: null,
     args: [
       "--no-sandbox",
@@ -59,15 +58,15 @@ async function scrapeXListWithLogin(
     ignoreDefaultArgs: ["--enable-automation"],
   });
 
-  const page = await browser.newPage();
+  const webPage = await browserInstance.newPage();
 
-  // 设置更真实的 User-Agent
-  await page.setUserAgent(
+  // 设置真实的用户代理字符串
+  await webPage.setUserAgent(
     "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36"
   );
 
-  // 模拟真实用户行为
-  await page.setExtraHTTPHeaders({
+  // 配置HTTP请求头以模拟真实用户
+  await webPage.setExtraHTTPHeaders({
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
     Accept:
       "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -77,15 +76,15 @@ async function scrapeXListWithLogin(
     "sec-ch-ua-platform": '"macOS"',
   });
 
-  // 加载并设置 cookies
+  // 加载并配置认证cookies
   try {
-    const cookiesPath = path.resolve(__dirname, CONFIG.COOKIES_FILE);
-    if (!fs.existsSync(cookiesPath)) {
+    const cookiesFilePath = path.resolve(__dirname, APPLICATION_CONFIG.COOKIES_FILE_PATH);
+    if (!fs.existsSync(cookiesFilePath)) {
       throw new Error("未找到 cookies.json，请先导出 X 登录 cookie");
     }
 
-    const cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf-8"));
-    const cookiesWithDomain = cookies.map((cookie) => ({
+    const savedCookies = JSON.parse(fs.readFileSync(cookiesFilePath, "utf-8"));
+    const formattedCookies = savedCookies.map((cookie) => ({
       ...cookie,
       domain: ".x.com",
       path: "/",
@@ -93,146 +92,146 @@ async function scrapeXListWithLogin(
       sameSite: "None",
     }));
 
-    await page.setCookie(...cookiesWithDomain);
-    console.log("Cookies 设置成功");
+    await webPage.setCookie(...formattedCookies);
+    console.log("认证Cookies设置成功");
   } catch (error) {
-    await browser.close();
-    throw new Error(`Cookies 设置失败: ${error.message}`);
+    await browserInstance.close();
+    throw new Error(`Cookies设置失败: ${error.message}`);
   }
 
-  console.log(`正在打开 ${url} ...`);
-  await page.goto(url, { waitUntil: "networkidle2" });
+  console.log(`正在打开目标页面 ${targetUrl} ...`);
+  await webPage.goto(targetUrl, { waitUntil: "networkidle2" });
 
-  // 等待推文加载
+  // 等待推文内容加载完成
   try {
-    await page.waitForSelector('article [data-testid="tweetText"]', {
-      timeout: CONFIG.SCROLL_TIMEOUT,
+    await webPage.waitForSelector('article [data-testid="tweetText"]', {
+      timeout: APPLICATION_CONFIG.PAGE_LOAD_TIMEOUT,
     });
     console.log("推文列表加载成功");
   } catch (error) {
-    await browser.close();
-    throw new Error("推文列表加载超时，请检查列表 ID 或网络连接");
+    await browserInstance.close();
+    throw new Error("推文列表加载超时，请检查列表ID或网络连接");
   }
 
-  // 滚动并收集所有推文
-  let collected = [];
-  let previousLength = 0;
-  let noNewTweetsCount = 0;
-  let scrollCount = 0;
+  // 滚动页面并收集推文数据
+  let collectedTweets = [];
+  let previousTweetCount = 0;
+  let consecutiveEmptyScrolls = 0;
+  let currentScrollCount = 0;
 
-  console.log("开始收集推文...");
+  console.log("开始收集推文数据...");
 
-  while (scrollCount < maxScrolls) {
+  while (currentScrollCount < maxScrollCount) {
     // 获取当前页面上的所有推文
 
-    const tweets = await page.$$eval("article", (nodes) =>
-      nodes.map((article) => {
-        const textNode = article.querySelector('[data-testid="tweetText"]');
-        const linkNode = article.querySelector('a[href*="/status/"]');
+    const currentPageTweets = await webPage.$$eval("article", (articleNodes) =>
+      articleNodes.map((articleElement) => {
+        const tweetTextElement = articleElement.querySelector('[data-testid="tweetText"]');
+        const tweetLinkElement = articleElement.querySelector('a[href*="/status/"]');
         return {
-          content: textNode ? textNode.innerText.trim() : "",
-          url: linkNode ? linkNode.href : "",
+          content: tweetTextElement ? tweetTextElement.innerText.trim() : "",
+          url: tweetLinkElement ? tweetLinkElement.href : "",
         };
       })
     );
-    // 合并并去重
-    collected = [...new Set([...collected, ...tweets])];
+    // 合并新推文并去重
+    collectedTweets = [...new Set([...collectedTweets, ...currentPageTweets])];
 
-    console.log(`当前已收集 ${collected.length} 条推文`);
+    console.log(`当前已收集 ${collectedTweets.length} 条推文`);
 
     // 检查是否有新推文被添加
-    if (collected.length === previousLength) {
-      noNewTweetsCount++;
+    if (collectedTweets.length === previousTweetCount) {
+      consecutiveEmptyScrolls++;
 
       // 如果连续多次滚动都没有新推文，可能已经到底部了
-      if (noNewTweetsCount >= CONFIG.NO_NEW_TWEETS_LIMIT) {
+      if (consecutiveEmptyScrolls >= APPLICATION_CONFIG.CONSECUTIVE_EMPTY_SCROLL_LIMIT) {
         console.log(
-          `连续${CONFIG.NO_NEW_TWEETS_LIMIT}次滚动没有发现新推文，可能已到达列表底部`
+          `连续${APPLICATION_CONFIG.CONSECUTIVE_EMPTY_SCROLL_LIMIT}次滚动没有发现新推文，可能已到达列表底部`
         );
         break;
       }
     } else {
-      // 重置计数器
-      noNewTweetsCount = 0;
-      previousLength = collected.length;
+      // 重置空滚动计数器
+      consecutiveEmptyScrolls = 0;
+      previousTweetCount = collectedTweets.length;
     }
 
-    // 模拟真实的滚动行为
-    await page.evaluate(
-      (min, max) => {
-        const scrollHeight = Math.floor(Math.random() * (max - min)) + min;
-        window.scrollBy(0, scrollHeight);
+    // 模拟真实用户的滚动行为
+    await webPage.evaluate(
+      (minHeight, maxHeight) => {
+        const randomScrollHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+        window.scrollBy(0, randomScrollHeight);
       },
-      CONFIG.RANDOM_SCROLL_MIN,
-      CONFIG.RANDOM_SCROLL_MAX
+      APPLICATION_CONFIG.SCROLL_HEIGHT_MIN,
+      APPLICATION_CONFIG.SCROLL_HEIGHT_MAX
     );
 
-    // 随机等待时间，模拟人类行为
-    const randomWait =
+    // 随机延迟等待，模拟人类浏览行为
+    const randomDelayTime =
       Math.floor(
-        Math.random() * (CONFIG.WAIT_TIME_MAX - CONFIG.WAIT_TIME_MIN)
-      ) + CONFIG.WAIT_TIME_MIN;
-    await page.evaluate((wait) => {
-      return new Promise((resolve) => setTimeout(resolve, wait));
-    }, randomWait);
+        Math.random() * (APPLICATION_CONFIG.SCROLL_DELAY_MAX - APPLICATION_CONFIG.SCROLL_DELAY_MIN)
+      ) + APPLICATION_CONFIG.SCROLL_DELAY_MIN;
+    await webPage.evaluate((delayTime) => {
+      return new Promise((resolve) => setTimeout(resolve, delayTime));
+    }, randomDelayTime);
 
-    scrollCount++;
+    currentScrollCount++;
   }
 
-  // 关闭浏览器
-  await browser.close();
-  console.log(`爬取完成，共获取 ${collected.length} 条推文`);
+  // 关闭浏览器实例
+  await browserInstance.close();
+  console.log(`数据爬取完成，共获取 ${collectedTweets.length} 条推文`);
 
-  // 存储推文数据到数据库
-  if (collected.length > 0) {
+  // 将推文数据存储到数据库
+  if (collectedTweets.length > 0) {
     try {
       console.log("开始将推文数据存储到数据库...");
 
-      const formattedTweets = collected.map((tweet) => ({
-        content: tweet.content,
-        url: tweet.url,
+      const databaseReadyTweets = collectedTweets.map((tweetData) => ({
+        content: tweetData.content,
+        url: tweetData.url,
         created_at: new Date().toISOString(),
         list_id: listId,
       }));
 
-      await storeTweetsToSupabase(formattedTweets);
-      console.log(`成功将 ${collected.length} 条推文存储到数据库`);
+      await storeTweetDataToSupabase(databaseReadyTweets);
+      console.log(`成功将 ${collectedTweets.length} 条推文存储到数据库`);
     } catch (error) {
-      console.error("推文入库失败:", error.message);
+      console.error("推文数据入库失败:", error.message);
       throw error;
     }
   } else {
-    console.log("未获取到推文数据");
+    console.log("未获取到任何推文数据");
   }
 
-  return collected;
+  return collectedTweets;
 }
 
 /**
- * 主函数 - 执行推文爬取任务
+ * 主执行函数 - 启动推文数据爬取任务
  */
-async function main() {
-  const listId = "1950374938378113192"; // 默认列表 ID
-  const maxScrolls = 5; // 测试用较小的滚动次数
+async function executeTwitterScrapingTask() {
+  const defaultListId = "1950374938378113192"; // 默认推特列表ID
+  const testScrollCount = 5; // 测试环境使用较小的滚动次数
 
   try {
-    console.log("=== X.com 推文爬取服务启动 ===");
-    const tweets = await scrapeXListWithLogin(listId, maxScrolls);
-    console.log("=== 爬取任务完成 ===");
-    console.log(`总计获取推文: ${tweets.length} 条`);
+    console.log("=== Twitter推文爬取服务启动 ===");
+    const scrapedTweets = await scrapeTwitterListWithAuthentication(defaultListId, testScrollCount);
+    console.log("=== 数据爬取任务完成 ===");
+    console.log(`总计获取推文数据: ${scrapedTweets.length} 条`);
   } catch (error) {
-    console.error("=== 爬取任务失败 ===");
-    console.error("错误信息:", error.message);
+    console.error("=== 数据爬取任务失败 ===");
+    console.error("错误详情:", error.message);
     process.exit(1);
   }
 }
 
-// 导出函数供其他模块使用
+// 导出核心函数供其他模块使用
 module.exports = {
-  scrapeXListWithLogin,
+  scrapeTwitterListWithAuthentication,
 };
 
-// 如果直接运行此文件，则执行主函数
+// 如果直接运行此文件，则执行主任务函数
 if (require.main === module) {
-  main();
+  executeTwitterScrapingTask();
 }
