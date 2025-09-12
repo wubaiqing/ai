@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node serve/x.js",
     "dev": "node serve/x.js",
-    "login": "node loginAndSaveCookies.js"
+    "login": "node loginAndSaveCookies.js",
+    "generate-report": "node generateAIReport.js",
+    "test-report": "node testAIReport.js",
+    "test-api": "node testDeepSeekAPI.js"
   },
   "keywords": [
     "data",
@@ -17,6 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.56.0",
+    "axios": "^1.12.0",
     "dotenv": "^17.2.1",
     "node-cron": "^3.0.3",
     "puppeteer": "^24.19.0"
