@@ -53,6 +53,10 @@ cp .env.example .env
 X_TOKEN=your_x_api_bearer_token
 X_LIST_ID=your_x_list_id
 
+# X.com 登录凭据 (用于自动登录获取cookies)
+X_USERNAME=your_x_username_or_email
+X_PASSWORD=your_x_password
+
 # Supabase 配置
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -64,7 +68,22 @@ NODE_ENV=development
 # 注意：定时任务现在通过 Vercel Cron 配置，无需本地调度器
 ```
 
-### 3. 启动服务
+### 3. 获取 X.com Cookies
+
+项目提供了自动登录工具来获取必要的 cookies：
+
+```bash
+# 自动登录并保存 cookies
+node loginAndSaveCookies.js
+```
+
+**说明**：
+- 该脚本会使用 `.env` 文件中的 `X_USERNAME` 和 `X_PASSWORD` 自动登录 X.com
+- 登录成功后会自动保存 cookies 到 `cookies.json` 文件
+- 如果已存在有效的 cookies 文件，脚本会跳过登录过程
+- 首次运行时建议设置 `headless: false` 以便观察登录过程
+
+### 4. 启动服务
 
 ```bash
 # 开发模式
@@ -76,7 +95,7 @@ npm start
 
 服务将在 `http://localhost:3001` 启动。
 
-### 4. Docker 部署（推荐）
+### 5. Docker 部署（推荐）
 
 使用 Docker Compose 快速部署：
 
@@ -187,6 +206,8 @@ GET /
 | ------------------- | ---- | ---------------------- | --------------------------------- |
 | `X_TOKEN`           | ✅   | X.com API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAEvF3QEA...` |
 | `X_LIST_ID`         | ✅   | X.com 列表 ID          | `123456789`                       |
+| `X_USERNAME`        | ❌   | X.com 用户名或邮箱     | `your_username` 或 `user@email.com` |
+| `X_PASSWORD`        | ❌   | X.com 登录密码         | `your_password`                   |
 | `SUPABASE_URL`      | ✅   | Supabase 项目 URL      | `https://xxx.supabase.co`         |
 | `SUPABASE_ANON_KEY` | ✅   | Supabase 匿名密钥      | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
 | `PORT`              | ❌   | 服务器端口             | `8095` (Docker) / `3001` (开发)   |

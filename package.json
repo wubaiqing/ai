@@ -2,19 +2,11 @@
   "name": "tweets",
   "version": "1.0.0",
   "description": "数据采集项目",
-  "main": "serve/index.js",
+  "main": "serve/x.js",
   "scripts": {
-    "start": "node serve/index.js",
-    "dev": "node serve/index.js",
-    "docker:build": "docker build -t tweets .",
-    "docker:run": "docker run -p 8095:8095 --env-file .env tweets",
-    "docker:compose": "docker-compose up -d",
-    "docker:stop": "docker-compose down",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "start": "node serve/x.js",
+    "dev": "node serve/x.js",
+    "login": "node loginAndSaveCookies.js"
   },
   "keywords": [
     "data",
@@ -25,17 +17,8 @@
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.56.0",
-    "axios": "^1.11.0",
     "dotenv": "^17.2.1",
-    "koa": "^2.14.2",
-    "koa-bodyparser": "^4.4.1",
-    "koa-cors": "^0.0.16",
-    "koa-router": "^12.0.1",
     "node-cron": "^3.0.3",
     "puppeteer": "^24.19.0"
-  },
-  "devDependencies": {
-    "jest": "^29.0.0",
-    "prettier": "^3.0.0"
   }
 }
