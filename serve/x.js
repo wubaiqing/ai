@@ -1,3 +1,6 @@
+// 加载环境变量
+require('dotenv').config();
+
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
@@ -45,7 +48,7 @@ async function scrapeXListWithLogin(listId, maxScrolls = 100) {
   });
 
   // 读取 cookies.json 并设置
-  const cookiesPath = path.resolve(__dirname, 'cookies.json');
+  const cookiesPath = path.resolve(__dirname, '../cookies.json');
   if (!fs.existsSync(cookiesPath)) {
     throw new Error('未找到 cookies.json，请先导出 X 登录 cookie');
   }
