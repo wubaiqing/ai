@@ -134,8 +134,32 @@ async function scrapeTwitterListWithAuthentication(
         };
       })
     );
-    // 合并新推文并去重
-    collectedTweets = [...new Set([...collectedTweets, ...currentPageTweets])];
+    // 合并新推文并去重（基于URL字段进行正确的去重）
+    const beforeMergeCount = collectedTweets.length;
+    const newTweetsCount = currentPageTweets.length;
+    
+    // 过滤掉空URL或空内容的推文
+    const validNewTweets = currentPageTweets.filter(tweet => 
+      tweet.url && tweet.url.trim() !== '' && 
+      tweet.content && tweet.content.trim() !== ''
+    );
+    
+    // 基于URL进行去重合并
+    const allTweets = [...collectedTweets, ...validNewTweets];
+    const uniqueTweetMap = new Map();
+    
+    allTweets.forEach(tweet => {
+      if (!uniqueTweetMap.has(tweet.url)) {
+        uniqueTweetMap.set(tweet.url, tweet);
+      }
+    });
+    
+    collectedTweets = Array.from(uniqueTweetMap.values());
+    
+    const afterMergeCount = collectedTweets.length;
+    const duplicatesFiltered = (beforeMergeCount + validNewTweets.length) - afterMergeCount;
+    
+    console.log(`页面推文: ${newTweetsCount} 条, 有效: ${validNewTweets.length} 条, 去重: ${duplicatesFiltered} 条`);
 
     console.log(`当前已收集 ${collectedTweets.length} 条推文`);
 
@@ -212,7 +236,7 @@ async function scrapeTwitterListWithAuthentication(
  */
 async function executeTwitterScrapingTask() {
   const defaultListId = "1950374938378113192"; // 默认推特列表ID
-  const testScrollCount = 5; // 测试环境使用较小的滚动次数
+  const testScrollCount = 30; // 测试环境使用较小的滚动次数
 
   try {
     console.log("=== Twitter推文爬取服务启动 ===");
