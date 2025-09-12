@@ -1,3 +1,8 @@
+/**
+ * X.com 推文爬取服务
+ * 使用 Puppeteer 爬取指定列表的推文数据并存储到 Supabase
+ */
+
 // 加载环境变量
 require('dotenv').config();
 
@@ -6,27 +11,49 @@ const fs = require('fs');
 const path = require('path');
 const { storeTweetsToSupabase } = require('../lib/database');
 
-async function scrapeXListWithLogin(listId, maxScrolls = 100) {
-  const url = `https://x.com/i/lists/${listId}`;
+// 配置常量
+const CONFIG = {
+  CHROME_PATH: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  COOKIES_FILE: '../cookies.json',
+  DEFAULT_MAX_SCROLLS: 100,
+  SCROLL_TIMEOUT: 20000,
+  NO_NEW_TWEETS_LIMIT: 5,
+  RANDOM_SCROLL_MIN: 300,
+  RANDOM_SCROLL_MAX: 600,
+  WAIT_TIME_MIN: 1500,
+  WAIT_TIME_MAX: 2500
+};
 
-  // 使用已安装的 Chrome 浏览器
+/**
+ * 爬取 X.com 列表推文数据
+ * @param {string} listId - X.com 列表 ID
+ * @param {number} maxScrolls - 最大滚动次数，默认 100
+ * @returns {Promise<Array>} 推文数据数组
+ */
+async function scrapeXListWithLogin(listId, maxScrolls = CONFIG.DEFAULT_MAX_SCROLLS) {
+  if (!listId) {
+    throw new Error('列表 ID 不能为空');
+  }
+
+  const url = `https://x.com/i/lists/${listId}`;
+  console.log(`开始爬取列表: ${listId}`);
+
+  // 启动浏览器
   const browser = await puppeteer.launch({
-    headless: true, // 显示浏览器界面
-    executablePath:
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', // macOS 上 Chrome 的路径
-    // userDataDir: '~/Library/Application Support/Google/Chrome/Default', // 使用默认的用户数据目录
-    defaultViewport: null, // 使用默认视口大小
+    headless: false,
+    executablePath: CONFIG.CHROME_PATH,
+    defaultViewport: null,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-web-security',
       '--disable-features=IsolateOrigins,site-per-process',
-      '--window-size=1920,1080', // 设置窗口大小
-      '--start-maximized', // 最大化窗口
-      '--disable-notifications', // 禁用通知
-      '--disable-extensions', // 禁用扩展
+      '--window-size=1920,1080',
+      '--start-maximized',
+      '--disable-notifications',
+      '--disable-extensions',
     ],
-    ignoreDefaultArgs: ['--enable-automation'], // 隐藏自动化控制标志
+    ignoreDefaultArgs: ['--enable-automation'],
   });
 
   const page = await browser.newPage();
@@ -47,32 +74,42 @@ async function scrapeXListWithLogin(listId, maxScrolls = 100) {
     'sec-ch-ua-platform': '"macOS"',
   });
 
-  // 读取 cookies.json 并设置
-  const cookiesPath = path.resolve(__dirname, '../cookies.json');
-  if (!fs.existsSync(cookiesPath)) {
-    throw new Error('未找到 cookies.json，请先导出 X 登录 cookie');
+  // 加载并设置 cookies
+  try {
+    const cookiesPath = path.resolve(__dirname, CONFIG.COOKIES_FILE);
+    if (!fs.existsSync(cookiesPath)) {
+      throw new Error('未找到 cookies.json，请先导出 X 登录 cookie');
+    }
+
+    const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'));
+    const cookiesWithDomain = cookies.map(cookie => ({
+      ...cookie,
+      domain: '.x.com',
+      path: '/',
+      secure: true,
+      sameSite: 'None',
+    }));
+
+    await page.setCookie(...cookiesWithDomain);
+    console.log('Cookies 设置成功');
+  } catch (error) {
+    await browser.close();
+    throw new Error(`Cookies 设置失败: ${error.message}`);
   }
-
-  const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'));
-
-  // 为每个 cookie 添加必要属性
-  const cookiesWithDomain = cookies.map(cookie => ({
-    ...cookie,
-    domain: '.x.com',
-    path: '/',
-    secure: true,
-    sameSite: 'None',
-  }));
-
-  await page.setCookie(...cookiesWithDomain);
 
   console.log(`正在打开 ${url} ...`);
   await page.goto(url, { waitUntil: 'networkidle2' });
 
   // 等待推文加载
-  await page.waitForSelector('article [data-testid="tweetText"]', {
-    timeout: 20000,
-  });
+  try {
+    await page.waitForSelector('article [data-testid="tweetText"]', {
+      timeout: CONFIG.SCROLL_TIMEOUT,
+    });
+    console.log('推文列表加载成功');
+  } catch (error) {
+    await browser.close();
+    throw new Error('推文列表加载超时，请检查列表 ID 或网络连接');
+  }
 
   // 滚动并收集所有推文
   let collected = [];
@@ -104,9 +141,9 @@ async function scrapeXListWithLogin(listId, maxScrolls = 100) {
     if (collected.length === previousLength) {
       noNewTweetsCount++;
 
-      // 如果连续5次滚动都没有新推文，可能已经到底部了
-      if (noNewTweetsCount >= 5) {
-        console.log('连续5次滚动没有发现新推文，可能已到达列表底部');
+      // 如果连续多次滚动都没有新推文，可能已经到底部了
+      if (noNewTweetsCount >= CONFIG.NO_NEW_TWEETS_LIMIT) {
+        console.log(`连续${CONFIG.NO_NEW_TWEETS_LIMIT}次滚动没有发现新推文，可能已到达列表底部`);
         break;
       }
     } else {
@@ -116,13 +153,13 @@ async function scrapeXListWithLogin(listId, maxScrolls = 100) {
     }
 
     // 模拟真实的滚动行为
-    await page.evaluate(() => {
-      const scrollHeight = Math.floor(Math.random() * 300) + 300; // 随机滚动距离
+    await page.evaluate((min, max) => {
+      const scrollHeight = Math.floor(Math.random() * (max - min)) + min;
       window.scrollBy(0, scrollHeight);
-    });
+    }, CONFIG.RANDOM_SCROLL_MIN, CONFIG.RANDOM_SCROLL_MAX);
 
-    // 使用 setTimeout 替代 waitForTimeout
-    const randomWait = Math.floor(Math.random() * 1000) + 1500;
+    // 随机等待时间，模拟人类行为
+    const randomWait = Math.floor(Math.random() * (CONFIG.WAIT_TIME_MAX - CONFIG.WAIT_TIME_MIN)) + CONFIG.WAIT_TIME_MIN;
     await page.evaluate(wait => {
       return new Promise(resolve => setTimeout(resolve, wait));
     }, randomWait);
@@ -130,40 +167,60 @@ async function scrapeXListWithLogin(listId, maxScrolls = 100) {
     scrollCount++;
   }
 
-  // 不关闭浏览器，让用户可以继续操作
-  // await browser.close();
-  console.log(
-    `爬取完成，共获取 ${collected.length} 条推文，浏览器保持打开状态，您可以继续操作`
-  );
+  // 关闭浏览器
+  await browser.close();
+  console.log(`爬取完成，共获取 ${collected.length} 条推文`);
 
-  // 将推文数据存储到数据库
-  try {
-    console.log('开始将推文数据存储到数据库...');
-    
-    // 格式化推文数据以符合数据库表结构
-    const formattedTweets = collected.map(tweet => ({
-      content: tweet.content,
-      url: tweet.url,
-      created_at: new Date().toISOString(),
-      list_id: listId
-    }));
-    
-    await storeTweetsToSupabase(formattedTweets);
-    console.log(`成功将 ${collected.length} 条推文存储到数据库`);
-  } catch (error) {
-    console.error('推文入库失败:', error.message);
-    // 即使入库失败，也返回爬取到的数据
+  // 存储推文数据到数据库
+  if (collected.length > 0) {
+    try {
+      console.log('开始将推文数据存储到数据库...');
+      
+      const formattedTweets = collected.map(tweet => ({
+        content: tweet.content,
+        url: tweet.url,
+        created_at: new Date().toISOString(),
+        list_id: listId
+      }));
+      
+      await storeTweetsToSupabase(formattedTweets);
+      console.log(`成功将 ${collected.length} 条推文存储到数据库`);
+    } catch (error) {
+      console.error('推文入库失败:', error.message);
+      throw error;
+    }
+  } else {
+    console.log('未获取到推文数据');
   }
 
   return collected;
 }
 
-// 示例调用
-scrapeXListWithLogin('1950374938378113192', 5)
-  .then(tweets => {
-    console.log('获取到的推文：');
-    console.log(tweets);
-  })
-  .catch(err => {
-    console.error('爬取失败:', err);
-  });
+/**
+ * 主函数 - 执行推文爬取任务
+ */
+async function main() {
+  const listId = '1950374938378113192'; // 默认列表 ID
+  const maxScrolls = 5; // 测试用较小的滚动次数
+
+  try {
+    console.log('=== X.com 推文爬取服务启动 ===');
+    const tweets = await scrapeXListWithLogin(listId, maxScrolls);
+    console.log('=== 爬取任务完成 ===');
+    console.log(`总计获取推文: ${tweets.length} 条`);
+  } catch (error) {
+    console.error('=== 爬取任务失败 ===');
+    console.error('错误信息:', error.message);
+    process.exit(1);
+  }
+}
+
+// 导出函数供其他模块使用
+module.exports = {
+  scrapeXListWithLogin
+};
+
+// 如果直接运行此文件，则执行主函数
+if (require.main === module) {
+  main();
+}
