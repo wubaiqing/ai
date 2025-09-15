@@ -51,12 +51,15 @@ async function handleShowMoreButtons(page) {
         ];
         
         const showMoreTexts = ['Show more', '显示更多'];
+        const showMoreRepliesTexts = ['Show more replies', '显示更多回复'];
         
         showMoreSelectors.forEach(selector => {
           const elements = article.querySelectorAll(selector);
           elements.forEach(element => {
             const text = element.textContent?.trim();
-            if (text && showMoreTexts.some(showText => text === showText)) {
+            // 只点击'Show more'按钮，排除'Show more replies'按钮
+            if (text && showMoreTexts.some(showText => text === showText) && 
+                !showMoreRepliesTexts.some(replyText => text === replyText)) {
               // 检查元素是否可见且为蓝色
               const rect = element.getBoundingClientRect();
               const computedStyle = window.getComputedStyle(element);
