@@ -40,6 +40,8 @@ coverage/
 # Vercel
 .vercel
 
+reports/
+
 # Supabase migrations (if not needed in repo)
 supabase/migrations/
 
