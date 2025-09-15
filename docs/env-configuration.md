@@ -1,28 +1,12 @@
 # 环境变量配置文档
 
-本文档详细说明了 X.com 数据采集服务所需的环境变量配置。
+本文档详细说明了推文数据采集和AI简报生成服务所需的环境变量配置。
 
 ## 📋 配置清单
 
 ### 必需配置
 
 以下环境变量是服务正常运行的必要配置：
-
-#### X.com API 配置
-
-```env
-# X.com API Bearer Token
-X_TOKEN=AAAAAAAAAAAAAAAAAAAAAEvF3QEAAAAAqQPitn6aODiLvUjmJWkf8D0zBjw%3DqMx1234567890abcdef
-
-# X.com 列表 ID
-X_LIST_ID=123456789
-```
-
-**获取方法**：
-
-* `X_TOKEN`: 从 X.com Developer Portal 获取 Bearer Token
-
-* `X_LIST_ID`: 从 X.com 列表 URL 中提取，格式如 `https://twitter.com/i/lists/{LIST_ID}`
 
 #### Supabase 数据库配置
 
@@ -44,11 +28,27 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 * 复制 Project URL 和 anon public key
 
+#### AI 服务配置
+
+```env
+# 硅基流动平台 API 密钥
+SILICONFLOW_API_KEY=sk-your-siliconflow-api-key
+
+# AI 模型配置（可选，默认使用 deepseek-chat）
+AI_MODEL=deepseek-chat
+```
+
+**获取方法**：
+
+* 登录 [硅基流动平台](https://siliconflow.cn/)
+* 获取 API 密钥用于调用 DeepSeek 模型
+* 用于 AI 简报生成功能
+
 ### 可选配置
 
 以下环境变量为可选配置，用于增强功能：
 
-#### X.com 自动登录配置
+#### X.com 登录配置
 
 ```env
 # X.com 用户名或邮箱（用于自动登录）
@@ -63,10 +63,9 @@ X_PASSWORD=your_password
 **用途**：
 
 * 用于 `loginAndSaveCookies.js` 脚本自动登录
-
-* 获取必要的 cookies 用于数据采集
-
-* 如果不配置，需要手动获取 cookies
+* 获取必要的 cookies 用于推文数据采集
+* 支持使用用户名或邮箱登录
+* 如果不配置，需要手动处理登录流程
 
 #### 服务器配置
 

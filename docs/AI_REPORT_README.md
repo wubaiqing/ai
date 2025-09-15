@@ -1,8 +1,15 @@
-# AI简报生成脚本使用说明
+# AI 简报生成服务使用说明
 
-## 功能介绍
+本文档详细介绍了 AI 简报生成功能的使用方法、配置要求和常见问题解决方案。
 
-本脚本用于读取tweets表中当天的所有数据，调用硅基流动平台的DeepSeek接口，分析推文内容并生成中文科技简报。
+## 📋 功能介绍
+
+AI 简报生成服务 (`serve/ai.js`) 能够：
+- 自动从 Supabase 数据库获取推文数据
+- 使用硅基流动平台的 DeepSeek 模型进行智能分析
+- 生成结构化的科技资讯简报
+- 支持多种输出格式和自定义配置
+- 提供完整的错误处理和日志记录
 
 ## 配置要求
 
@@ -39,7 +46,29 @@ node checkConfig.js
 - 测试API连接是否正常
 - 提供详细的配置指导
 
-## 使用方法
+## 🚀 使用方法
+
+### 基本使用
+
+```bash
+# 直接运行 AI 简报生成服务
+node serve/ai.js
+
+# 使用 npm 脚本运行
+npm run generate-report
+```
+
+### 高级选项
+
+```bash
+# 显示生成的内容（不保存到文件）
+node serve/ai.js --show-content
+
+# 查看帮助信息
+node serve/ai.js --help
+```
+
+### 配置和测试
 
 1. **配置API密钥**
    ```bash
@@ -47,16 +76,7 @@ node checkConfig.js
    SILICONFLOW_API_KEY=your_api_key_here
    ```
 
-2. **运行脚本**
-   ```bash
-   # 方式1：直接运行
-   node generateAIReport.js
-   
-   # 方式2：使用npm脚本
-   npm run generate-report
-   ```
-
-3. **测试功能**
+2. **测试功能**
    ```bash
    # 完整功能测试
    npm run test-report
