@@ -19,8 +19,10 @@ X_LIST_ID=123456789
 ```
 
 **获取方法**：
-- `X_TOKEN`: 从 X.com Developer Portal 获取 Bearer Token
-- `X_LIST_ID`: 从 X.com 列表 URL 中提取，格式如 `https://twitter.com/i/lists/{LIST_ID}`
+
+* `X_TOKEN`: 从 X.com Developer Portal 获取 Bearer Token
+
+* `X_LIST_ID`: 从 X.com 列表 URL 中提取，格式如 `https://twitter.com/i/lists/{LIST_ID}`
 
 #### Supabase 数据库配置
 
@@ -33,10 +35,14 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 ```
 
 **获取方法**：
-- 登录 [Supabase Dashboard](https://supabase.com/dashboard)
-- 选择你的项目
-- 进入 Settings > API
-- 复制 Project URL 和 anon public key
+
+* 登录 [Supabase Dashboard](https://supabase.com/dashboard)
+
+* 选择你的项目
+
+* 进入 Settings > API
+
+* 复制 Project URL 和 anon public key
 
 ### 可选配置
 
@@ -55,9 +61,12 @@ X_PASSWORD=your_password
 ```
 
 **用途**：
-- 用于 `loginAndSaveCookies.js` 脚本自动登录
-- 获取必要的 cookies 用于数据采集
-- 如果不配置，需要手动获取 cookies
+
+* 用于 `loginAndSaveCookies.js` 脚本自动登录
+
+* 获取必要的 cookies 用于数据采集
+
+* 如果不配置，需要手动获取 cookies
 
 #### 服务器配置
 
@@ -155,9 +164,11 @@ curl -H "Authorization: Bearer $X_TOKEN" \
 
 ### 1. 保护敏感信息
 
-- **永远不要**将 `.env` 文件提交到版本控制系统
-- 确保 `.env` 文件已添加到 `.gitignore`
-- 定期更换 API 密钥和密码
+* **永远不要**将 `.env` 文件提交到版本控制系统
+
+* 确保 `.env` 文件已添加到 `.gitignore`
+
+* 定期更换 API 密钥和密码
 
 ### 2. 权限控制
 
@@ -221,27 +232,36 @@ services:
 **错误信息**：`undefined` 或 `null` 值
 
 **解决方案**：
-- 检查 `.env` 文件是否存在
-- 确认变量名拼写正确
-- 验证 `dotenv` 包是否正确加载
+
+* 检查 `.env` 文件是否存在
+
+* 确认变量名拼写正确
+
+* 验证 `dotenv` 包是否正确加载
 
 #### 2. Supabase 连接失败
 
 **错误信息**：`Invalid API key` 或连接超时
 
 **解决方案**：
-- 验证 `SUPABASE_URL` 格式正确
-- 检查 `SUPABASE_ANON_KEY` 是否有效
-- 确认 Supabase 项目状态正常
+
+* 验证 `SUPABASE_URL` 格式正确
+
+* 检查 `SUPABASE_ANON_KEY` 是否有效
+
+* 确认 Supabase 项目状态正常
 
 #### 3. X.com API 访问被拒绝
 
 **错误信息**：`401 Unauthorized` 或 `403 Forbidden`
 
 **解决方案**：
-- 检查 `X_TOKEN` 是否有效
-- 验证 API 权限设置
-- 确认 `X_LIST_ID` 存在且可访问
+
+* 检查 `X_TOKEN` 是否有效
+
+* 验证 API 权限设置
+
+* 确认 `X_LIST_ID` 存在且可访问
 
 ### 调试技巧
 
@@ -279,7 +299,11 @@ node test-config.js
 
 ## 📚 参考资源
 
-- [Supabase 文档](https://supabase.com/docs)
-- [X.com API 文档](https://developer.twitter.com/en/docs)
-- [dotenv 包文档](https://www.npmjs.com/package/dotenv)
-- [Docker 环境变量指南](https://docs.docker.com/compose/environment-variables/)
+* [Supabase 文档](https://supabase.com/docs)
+
+* [X.com API 文档](https://developer.twitter.com/en/docs)
+
+* [dotenv 包文档](https://www.npmjs.com/package/dotenv)
+
+* [Docker 环境变量指南](https://docs.docker.com/compose/environment-variables/)
+
