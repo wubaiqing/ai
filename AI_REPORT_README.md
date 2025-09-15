@@ -11,8 +11,10 @@
 在 `.env` 文件中添加以下配置：
 
 ```env
-# 硅基流动平台配置
-SILICONFLOW_API_KEY=你的API密钥
+# AI服务配置
+# 硅基流动平台API密钥，用于AI简报生成
+# 获取方式：访问 https://siliconflow.cn/ 注册账号并获取API密钥
+SILICONFLOW_API_KEY=你的真实API密钥
 ```
 
 ### 2. 获取API密钥
@@ -21,6 +23,21 @@ SILICONFLOW_API_KEY=你的API密钥
 2. 注册账号并登录
 3. 在控制台中创建API密钥
 4. 将密钥配置到 `.env` 文件中
+
+### 3. 配置检查工具
+
+使用配置检查工具验证环境变量设置：
+
+```bash
+# 检查配置并测试API连接
+node checkConfig.js
+```
+
+该工具会：
+- 检查必要的环境变量是否已设置
+- 验证API密钥是否为占位符
+- 测试API连接是否正常
+- 提供详细的配置指导
 
 ## 使用方法
 
@@ -107,14 +124,47 @@ node -e "const { fetchTodayTweets } = require('./generateAIReport.js'); fetchTod
 
 ## 常见问题
 
-### Q: API调用返回401错误
-A: 请检查 `SILICONFLOW_API_KEY` 是否正确配置在 `.env` 文件中。
+### Q: API调用返回401认证错误
+
+**错误信息**: `AI简报生成失败: API请求失败 (状态码: 401): 未知错误`
+
+**可能原因**:
+1. API密钥未配置或仍为占位符
+2. API密钥已过期或无效
+3. API密钥权限不足
+
+**解决步骤**:
+1. **检查配置**:
+   ```bash
+   node checkConfig.js
+   ```
+
+2. **验证.env文件**:
+   - 确保 `SILICONFLOW_API_KEY` 已设置
+   - 确保不是占位符 `your_siliconflow_api_key_here`
+   - 确保API密钥格式正确
+
+3. **获取新的API密钥**:
+   - 访问 [硅基流动平台](https://siliconflow.cn/)
+   - 登录账户并检查API密钥状态
+   - 如需要，创建新的API密钥
+
+4. **重启应用**:
+   ```bash
+   # 修改.env文件后需要重启
+   # 如果使用PM2
+   pm2 restart all
+   # 或直接重新运行脚本
+   ```
 
 ### Q: 没有查询到当天数据
 A: 请确认tweets表中有当天的数据，检查数据库连接是否正常。
 
 ### Q: 生成的简报内容为空
 A: 可能是当天的推文中没有科技相关内容，或者AI接口调用失败。
+
+### Q: 配置检查工具报错
+A: 请确保已安装所有依赖包：`npm install`，并检查.env文件是否存在。
 
 ## 日志说明
 

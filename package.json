@@ -9,7 +9,8 @@
     "login": "node loginAndSaveCookies.js",
     "generate-report": "node generateAIReport.js",
     "test-report": "node testAIReport.js",
-    "test-api": "node testDeepSeekAPI.js"
+    "test-api": "node testDeepSeekAPI.js",
+    "check-config": "node checkConfig.js"
   },
   "keywords": [
     "data",
