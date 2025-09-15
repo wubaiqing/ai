@@ -15,20 +15,20 @@ const { storeTweetDataToSupabase } = require("../lib/database");
 /**
  * 处理页面中的'Show more'按钮，点击展开完整推文内容
  * 只点击主推文中的蓝色'Show more'按钮，不点击引用推文中的按钮
+ * 防止意外点击到推文详情页
  * @param {Object} page - Puppeteer页面对象
  */
 async function handleShowMoreButtons(page) {
   try {
-    let buttonsClicked = 0;
-    
-    // 使用页面评估来查找和点击主推文中的'Show more'按钮
-    const clickedCount = await page.evaluate(() => {
-      let clicked = 0;
+    // 在页面上下文中查找并点击'Show more'按钮，返回点击结果
+    const clickResult = await page.evaluate(async () => {
+      let buttonsClicked = 0;
+      const clickedButtons = [];
       
       // 查找所有文章元素（每个推文都在article标签内）
       const articles = document.querySelectorAll('article');
       
-      articles.forEach(article => {
+      for (const article of articles) {
         // 检查是否为引用推文（quoted tweet）
         // 引用推文通常在特定的容器内，具有特定的data-testid或类名
         const isQuotedTweet = article.querySelector('[data-testid="quoteTweet"]') || 
@@ -38,31 +38,34 @@ async function handleShowMoreButtons(page) {
         
         // 如果是引用推文，跳过处理
         if (isQuotedTweet) {
-          return;
+          continue;
         }
         
-        // 在主推文中查找'Show more'按钮
-        const showMoreSelectors = [
-          '[data-testid="tweet-text-show-more-link"]',
-          'span[style*="color: rgb(29, 155, 240)"]', // 蓝色文本
-          'span[style*="color: rgb(29,155,240)"]',   // 蓝色文本（无空格）
-          'a[role="link"] span',
-          '[role="button"] span'
-        ];
+        // 优先使用精确的data-testid选择器
+        let showMoreElement = article.querySelector('[data-testid="tweet-text-show-more-link"]');
         
-        const showMoreTexts = ['Show more', '显示更多'];
-        const showMoreRepliesTexts = ['Show more replies', '显示更多回复'];
-        
-        showMoreSelectors.forEach(selector => {
-          const elements = article.querySelectorAll(selector);
-          elements.forEach(element => {
-            const text = element.textContent?.trim();
-            // 只点击'Show more'按钮，排除'Show more replies'按钮
-            if (text && showMoreTexts.some(showText => text === showText) && 
-                !showMoreRepliesTexts.some(replyText => text === replyText)) {
+        if (showMoreElement) {
+          // 验证这是一个文本展开按钮而不是推文链接
+          const text = showMoreElement.textContent?.trim();
+          const showMoreTexts = ['Show more', '显示更多'];
+          const showMoreRepliesTexts = ['Show more replies', '显示更多回复'];
+          
+          // 检查文本内容
+          if (text && showMoreTexts.some(showText => text === showText) && 
+              !showMoreRepliesTexts.some(replyText => text === replyText)) {
+            
+            // 检查是否为推文详情页链接（避免点击）
+            const href = showMoreElement.getAttribute('href');
+            const isDetailLink = href && (href.includes('/status/') || href.includes('/tweet/'));
+            
+            // 检查父级元素是否为推文主体区域（避免点击推文本身）
+            const tweetMainArea = showMoreElement.closest('[data-testid="tweet"]');
+            const isInTweetText = showMoreElement.closest('[data-testid="tweetText"]');
+            
+            if (!isDetailLink && isInTweetText && !tweetMainArea?.querySelector('a[href*="/status/"]')?.contains(showMoreElement)) {
               // 检查元素是否可见且为蓝色
-              const rect = element.getBoundingClientRect();
-              const computedStyle = window.getComputedStyle(element);
+              const rect = showMoreElement.getBoundingClientRect();
+              const computedStyle = window.getComputedStyle(showMoreElement);
               const color = computedStyle.color;
               
               // 检查是否为蓝色（Twitter的蓝色通常是rgb(29, 155, 240)）
@@ -72,38 +75,98 @@ async function handleShowMoreButtons(page) {
               
               if (rect.width > 0 && rect.height > 0 && isBlueColor) {
                 try {
-                  // 尝试点击元素或其父级可点击元素
-                  let clickTarget = element;
-                  while (clickTarget && clickTarget !== document.body) {
-                    if (clickTarget.tagName === 'A' || 
-                        clickTarget.getAttribute('role') === 'button' || 
-                        clickTarget.getAttribute('role') === 'link' ||
-                        clickTarget.onclick) {
-                      clickTarget.click();
-                      clicked++;
-                      console.log(`点击了主推文中的'Show more'按钮: ${text}`);
-                      return; // 找到并点击后退出
-                    }
-                    clickTarget = clickTarget.parentElement;
-                  }
+                  // 直接点击精确的元素
+                  showMoreElement.click();
+                  buttonsClicked++;
+                  clickedButtons.push(text);
+                  console.log(`点击了主推文中的'Show more'按钮: ${text}`);
+                  
+                  // 点击后等待500ms让内容加载
+                  await new Promise(resolve => setTimeout(resolve, 500));
                 } catch (e) {
                   console.log(`点击'Show more'按钮失败: ${e.message}`);
                 }
               }
             }
-          });
-        });
-      });
+          }
+        } else {
+          // 如果没有找到精确的data-testid，使用备用选择器
+          const backupSelectors = [
+            'span[style*="color: rgb(29, 155, 240)"]', // 蓝色文本
+            'span[style*="color: rgb(29,155,240)"]'    // 蓝色文本（无空格）
+          ];
+          
+          const showMoreTexts = ['Show more', '显示更多'];
+          const showMoreRepliesTexts = ['Show more replies', '显示更多回复'];
+          
+          for (const selector of backupSelectors) {
+            const elements = article.querySelectorAll(selector);
+            for (const element of elements) {
+              const text = element.textContent?.trim();
+              // 只处理'Show more'按钮，排除'Show more replies'按钮
+              if (text && showMoreTexts.some(showText => text === showText) && 
+                  !showMoreRepliesTexts.some(replyText => text === replyText)) {
+                
+                // 检查是否在推文文本区域内
+                const isInTweetText = element.closest('[data-testid="tweetText"]');
+                if (!isInTweetText) continue;
+                
+                // 检查元素是否可见且为蓝色
+                const rect = element.getBoundingClientRect();
+                const computedStyle = window.getComputedStyle(element);
+                const color = computedStyle.color;
+                
+                // 检查是否为蓝色（Twitter的蓝色通常是rgb(29, 155, 240)）
+                const isBlueColor = color.includes('29, 155, 240') || 
+                                  color.includes('rgb(29,155,240)') ||
+                                  color.includes('#1d9bf0');
+                
+                if (rect.width > 0 && rect.height > 0 && isBlueColor) {
+                  // 找到可点击的父级元素，但要避免点击推文链接
+                  let clickTarget = element;
+                  while (clickTarget && clickTarget !== document.body) {
+                    // 检查是否为推文详情页链接
+                    const href = clickTarget.getAttribute('href');
+                    const isDetailLink = href && (href.includes('/status/') || href.includes('/tweet/'));
+                    
+                    if (isDetailLink) {
+                      // 如果是推文详情链接，跳过
+                      break;
+                    }
+                    
+                    if (clickTarget.tagName === 'A' || 
+                        clickTarget.getAttribute('role') === 'button' || 
+                        clickTarget.getAttribute('role') === 'link' ||
+                        clickTarget.onclick) {
+                      try {
+                        clickTarget.click();
+                        buttonsClicked++;
+                        clickedButtons.push(text);
+                        console.log(`点击了主推文中的'Show more'按钮: ${text}`);
+                        
+                        // 点击后等待500ms让内容加载
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        break; // 找到并点击后退出
+                      } catch (e) {
+                        console.log(`点击'Show more'按钮失败: ${e.message}`);
+                      }
+                    }
+                    clickTarget = clickTarget.parentElement;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       
-      return clicked;
+      return { buttonsClicked, clickedButtons };
     });
     
-    buttonsClicked = clickedCount;
-    
-    if (buttonsClicked > 0) {
-      console.log(`成功点击 ${buttonsClicked} 个主推文中的'Show more'按钮`);
-      // 等待页面内容完全展开
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    if (clickResult.buttonsClicked > 0) {
+      console.log(`成功点击 ${clickResult.buttonsClicked} 个主推文中的'Show more'按钮`);
+      // 由于每次点击后已经等待了500ms，这里可以减少等待时间
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   } catch (error) {
     console.log(`处理'Show more'按钮时出错: ${error.message}`);
