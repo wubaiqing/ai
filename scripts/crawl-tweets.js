@@ -1,5 +1,9 @@
 /**
- * X.com 推文爬取服务
+ * X.com (Twitter) 推文爬取服务
+ * @module TwitterCrawler
+ * @requires puppeteer
+ * @requires fs
+ * @requires path
  */
 require("dotenv").config();
 
@@ -20,8 +24,9 @@ const CONFIG = {
 };
 
 /**
- * 处理页面中的'Show more'按钮，点击展开完整推文内容
+ * 处理"显示更多"按钮的点击操作
  * @param {Object} page - Puppeteer页面对象
+ * @returns {Promise<void>}
  */
 async function handleShowMoreButtons(page) {
   try {
@@ -62,10 +67,11 @@ async function handleShowMoreButtons(page) {
 }
 
 /**
- * 爬取 X.com 列表推文数据
- * @param {string} listId - X.com 列表 ID
- * @param {number} maxScrolls - 最大滚动次数，默认 100
+ * 执行Twitter推文爬取任务
+ * @param {string} targetUrl - 目标URL
+ * @param {number} [maxTweets=50] - 最大推文数量
  * @returns {Promise<Array>} 推文数据数组
+ * @throws {Error} 爬取错误时抛出
  */
 async function scrapeTwitterListWithAuthentication(
   listId,
