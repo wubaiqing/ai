@@ -203,7 +203,7 @@ async function scrapeTwitterListWithAuthentication(
   console.log(`开始爬取推特列表: ${listId}`);
 
   // 启动浏览器实例
-  const browserInstance = await puppeteer.launch({
+  const launchOptions = {
     headless: false,
     executablePath: APPLICATION_CONFIG.CHROME_EXECUTABLE_PATH,
     defaultViewport: null,
@@ -218,9 +218,27 @@ async function scrapeTwitterListWithAuthentication(
       "--disable-extensions",
     ],
     ignoreDefaultArgs: ["--enable-automation"],
-  });
+  };
+
+  // 如果启用了代理，添加代理配置
+  if (process.env.PROXY_ENABLED === 'true' && process.env.PROXY_HOST) {
+    const proxyServer = `${process.env.PROXY_HOST}:${process.env.PROXY_PORT || '8080'}`;
+    launchOptions.args.push(`--proxy-server=${proxyServer}`);
+    console.log(`使用代理服务器: ${proxyServer}`);
+  }
+
+  const browserInstance = await puppeteer.launch(launchOptions);
 
   const webPage = await browserInstance.newPage();
+
+  // 如果启用了代理且有认证信息，设置代理认证
+  if (process.env.PROXY_ENABLED === 'true' && process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+    await webPage.authenticate({
+      username: process.env.PROXY_USERNAME,
+      password: process.env.PROXY_PASSWORD
+    });
+    console.log('代理认证设置成功');
+  }
 
   // 设置真实的用户代理字符串
   await webPage.setUserAgent(
@@ -428,7 +446,7 @@ async function scrapeTwitterListWithAuthentication(
  */
 async function executeTwitterScrapingTask() {
   const defaultListId = "1950374938378113192"; // 默认推特列表ID
-  const testScrollCount = 100; // 测试环境使用较小的滚动次数
+  const testScrollCount = 200; // 测试环境使用较小的滚动次数
 
   try {
     console.log("=== Twitter推文爬取服务启动 ===");
