@@ -41,6 +41,7 @@ coverage/
 .vercel
 
 reports/*.md
+cookies.json
 
 # Supabase migrations (if not needed in repo)
 supabase/migrations/
