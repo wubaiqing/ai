@@ -7,7 +7,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const { storeTweetDataToSupabase } = require("../src/data/database");
-const { APPLICATION_CONFIG } = require("../src/lib/config.js");
+const APPLICATION_CONFIG = require("../src/lib/config.js");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
