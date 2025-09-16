@@ -77,6 +77,25 @@ PORT=3001
 NODE_ENV=production
 ```
 
+#### 代理配置
+
+```env
+# 代理服务器配置（用于访问 X.com）
+PROXY_ENABLED=false
+PROXY_HOST=your_proxy_host
+PROXY_PORT=8080
+PROXY_USERNAME=your_proxy_username
+PROXY_PASSWORD=your_proxy_password
+```
+
+**用途**：
+
+* 用于在网络受限环境中访问 X.com
+* 支持 HTTP 代理服务器
+* 可配置代理认证信息
+* 同时支持 Puppeteer 和 Axios 请求的代理
+* 设置 `PROXY_ENABLED=false` 可禁用代理功能
+
 ## 🔧 配置步骤
 
 ### 1. 复制模板文件
@@ -136,6 +155,12 @@ echo "X_LIST_ID: $X_LIST_ID"
 # 检查 Supabase 配置
 echo "SUPABASE_URL: $SUPABASE_URL"
 echo "SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:0:20}..."
+
+# 检查代理配置
+echo "PROXY_ENABLED: $PROXY_ENABLED"
+echo "PROXY_HOST: $PROXY_HOST"
+echo "PROXY_PORT: $PROXY_PORT"
+echo "PROXY_USERNAME: $PROXY_USERNAME"
 ```
 
 ### 测试连接
