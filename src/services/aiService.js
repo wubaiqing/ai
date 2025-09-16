@@ -17,8 +17,8 @@
  */
 
 const axios = require('axios');
-const { applicationConfig } = require('./reportConfig');
-const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('./utils');
+const { applicationConfig } = require('../reports/reportConfig');
+const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
 
 /**
  * AI服务管理类

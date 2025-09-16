@@ -19,8 +19,8 @@
 
 const fs = require('fs').promises;
 const path = require('path');
-const { applicationConfig, getReportFilePath } = require('./reportConfig');
-const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('./utils');
+const { applicationConfig, getReportFilePath } = require('../reports/reportConfig');
+const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('../lib/utils');
 
 /**
  * 文件操作服务管理类

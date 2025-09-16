@@ -86,18 +86,7 @@ class ApplicationConfiguration {
     };
   }
 
-  /**
-   * 获取任务调度器配置
-   */
-  getSchedulerConfiguration() {
-    const config = {
-      executionInterval: parseInt(process.env.SCHEDULER_INTERVAL) || 300000, // 5分钟
-      isEnabled: process.env.SCHEDULER_ENABLED !== 'false', // 默认启用
-    };
-    
-    console.log(`[配置] 调度器配置: ${config.executionInterval}, 启用: ${config.isEnabled}`);
-    return config;
-  }
+
 
   /**
    * 获取数据爬取配置
@@ -119,7 +108,6 @@ class ApplicationConfiguration {
       twitter: this.getTwitterConfiguration(),
       supabase: this.getSupabaseConfiguration(),
       server: this.getServerConfiguration(),
-      scheduler: this.getSchedulerConfiguration(),
       scraping: this.getScrapingConfiguration()
     };
   }

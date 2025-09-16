@@ -2,10 +2,10 @@
  * AI简报生成脚本完整测试
  */
 
-const { AIReportGenerator } = require('./lib/reportGenerator.js');
-const { TweetDataService } = require('./lib/tweetService.js');
-const { AIContentService } = require('./lib/aiService.js');
-const { FileOperationService } = require('./lib/fileService.js');
+const { AIReportGenerator } = require('../src/reports/reportGenerator.js');
+const { TweetDataService } = require('../src/services/tweetService.js');
+const { AIContentService } = require('../src/services/aiService.js');
+const { FileOperationService } = require('../src/services/fileService.js');
 const fs = require('fs').promises;
 const path = require('path');
 

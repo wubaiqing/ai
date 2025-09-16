@@ -4,7 +4,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const applicationConfig = require('./config');
+const applicationConfig = require('../lib/config');
 
 // 初始化 Supabase 数据库客户端
 const supabaseConfiguration = applicationConfig.getSupabaseConfiguration();

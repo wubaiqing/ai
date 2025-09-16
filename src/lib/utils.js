@@ -15,7 +15,7 @@
  * @namespace Utils
  */
 
-const { applicationConfig } = require('./reportConfig');
+const { applicationConfig } = require('../reports/reportConfig');
 
 /**
  * 日志记录器类
