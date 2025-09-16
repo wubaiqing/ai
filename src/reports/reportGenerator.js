@@ -18,11 +18,11 @@
  * @requires ../utils.js
  */
 
-const { tweetDataService } = require('./tweetService');
-const { aiContentService } = require('./aiService');
-const { fileOperationService } = require('./fileService');
+const { tweetDataService } = require('../services/tweetService');
+const { aiContentService } = require('../services/aiService');
+const { fileOperationService } = require('../services/fileService');
 const { applicationConfig } = require('./reportConfig');
-const { Logger, TimeUtils, ValidationUtils, ErrorHandler, DataFormatter } = require('./utils');
+const { Logger, TimeUtils, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
 
 /**
  * 报告生成器管理类

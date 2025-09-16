@@ -3,7 +3,7 @@
  * 用于分析推文数据爬取和存储过程中的数据丢失问题
  */
 
-const { retrieveTweetDataFromSupabase } = require('./lib/database');
+const { retrieveTweetDataFromSupabase } = require('../src/data/database');
 const fs = require('fs');
 const path = require('path');
 

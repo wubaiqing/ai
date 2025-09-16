@@ -16,8 +16,8 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const { applicationConfig } = require('./reportConfig');
-const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('./utils');
+const { applicationConfig } = require('../reports/reportConfig');
+const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('../lib/utils');
 
 /**
  * 推文数据服务类

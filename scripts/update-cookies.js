@@ -7,7 +7,7 @@ require('dotenv').config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
-const config = require("./lib/config");
+const config = require("../src/lib/config");
 
 // 应用程序配置常量
 const APPLICATION_CONFIG = {

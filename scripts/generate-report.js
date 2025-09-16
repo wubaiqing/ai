@@ -3,9 +3,9 @@
  * 重构后的简化版本，使用模块化架构
  */
 
-const { aiReportGenerator } = require('../lib/reportGenerator');
-const { applicationConfig, validateEnvironmentVariables } = require('../lib/reportConfig');
-const { Logger, ErrorHandler } = require('../lib/utils');
+const { aiReportGenerator } = require('../src/reports/reportGenerator');
+const { applicationConfig, validateEnvironmentVariables } = require('../src/reports/reportConfig');
+const { Logger, ErrorHandler } = require('../src/lib/utils');
 
 /**
  * 执行AI简报生成的主函数
@@ -59,7 +59,7 @@ async function executeAIReportGeneration(options = {}) {
  */
 function displayApplicationHelp() {
   console.log(`
-使用方法: node serve/ai.js [选项]
+使用方法: node scripts/generate-report.js [选项]
 
 选项:
   -h, --help     显示此帮助信息

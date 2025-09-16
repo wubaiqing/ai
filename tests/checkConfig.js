@@ -107,7 +107,7 @@ async function testAPIConnection() {
   console.log('\n🔗 测试API连接...');
   
   try {
-    const { aiContentService } = require('./lib/aiService');
+    const { aiContentService } = require('../src/services/aiService');
     
     // 验证配置
     const validation = aiContentService.validateConfiguration();
