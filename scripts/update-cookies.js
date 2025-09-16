@@ -9,15 +9,15 @@ const fs = require("fs");
 const path = require("path");
 const config = require("../src/lib/config");
 
+import { APPLICATION_CONFIG } from '../src/lib/config.js';
+
 // 应用程序配置常量
-const APPLICATION_CONFIG = {
-  CHROME_EXECUTABLE_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  COOKIES_FILE_PATH: "cookies.json",
+const LOCAL_CONFIG = {
+  CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  COOKIES_FILE_PATH: 'cookies.json',
   LOGIN_OPERATION_TIMEOUT: 30000,
   PAGE_NAVIGATION_TIMEOUT: 10000,
-  BROWSER_VIEWPORT: { width: 1280, height: 720 },
-  BROWSER_USER_AGENT:
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  BROWSER_VIEWPORT: { width: 1280, height: 720 }
 };
 
 /**
@@ -36,7 +36,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     // 启动浏览器
     browserInstance = await puppeteer.launch({
       headless: false, // 设置为 false 以便调试观察
-      executablePath: APPLICATION_CONFIG.CHROME_EXECUTABLE_PATH,
+      executablePath: LOCAL_CONFIG.CHROME_EXECUTABLE_PATH,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -49,19 +49,19 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     });
 
     webPage = await browserInstance.newPage();
-    await webPage.setViewport(APPLICATION_CONFIG.BROWSER_VIEWPORT);
-    await webPage.setUserAgent(APPLICATION_CONFIG.BROWSER_USER_AGENT);
+    await webPage.setViewport(LOCAL_CONFIG.BROWSER_VIEWPORT);
+    await webPage.setUserAgent(APPLICATION_CONFIG.getUserAgent());
 
     console.log("正在导航到 Twitter/X.com 登录页面...");
     await webPage.goto("https://x.com/i/flow/login", {
       waitUntil: "networkidle2",
-      timeout: APPLICATION_CONFIG.PAGE_NAVIGATION_TIMEOUT,
+      timeout: LOCAL_CONFIG.PAGE_NAVIGATION_TIMEOUT,
     });
 
     // 等待用户名输入框加载完成
     console.log("等待用户名输入框加载...");
     await webPage.waitForSelector('input[name="text"]', {
-      timeout: APPLICATION_CONFIG.LOGIN_OPERATION_TIMEOUT,
+      timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
     });
 
     // 填入用户账户名
@@ -88,7 +88,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     // 等待密码输入框加载
     console.log("等待密码输入框加载...");
     await webPage.waitForSelector('input[name="password"]', {
-      timeout: APPLICATION_CONFIG.LOGIN_OPERATION_TIMEOUT,
+      timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
     });
 
     // 填入用户密码
@@ -101,7 +101,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
 
     // 等待登录操作完成
     console.log("等待登录操作完成...");
-    await webPage.waitForNavigation({ waitUntil: "networkidle2", timeout: APPLICATION_CONFIG.LOGIN_OPERATION_TIMEOUT });
+    await webPage.waitForNavigation({ waitUntil: "networkidle2", timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT });
     
     // 检查是否登录成功（通过URL判断）
     const currentUrl = webPage.url();
@@ -114,7 +114,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
       
       // 将cookies数据保存到本地文件
       console.log("正在保存cookies数据到本地文件...");
-      const cookiesStoragePath = path.resolve(__dirname, APPLICATION_CONFIG.COOKIES_FILE_PATH);
+      const cookiesStoragePath = path.resolve(__dirname, LOCAL_CONFIG.COOKIES_FILE_PATH);
       fs.writeFileSync(cookiesStoragePath, JSON.stringify(authenticationCookies, null, 2));
       
       console.log(`认证Cookies已成功保存到: ${cookiesStoragePath}`);
@@ -161,7 +161,7 @@ async function authenticateFromEnvironmentVariables() {
  * @returns {boolean} cookies 是否有效
  */
 function checkAuthenticationCookiesExist() {
-  const cookiesStoragePath = path.resolve(__dirname, APPLICATION_CONFIG.COOKIES_FILE_PATH);
+  const cookiesStoragePath = path.resolve(__dirname, LOCAL_CONFIG.COOKIES_FILE_PATH);
   
   if (!fs.existsSync(cookiesStoragePath)) {
     console.log('[检查] cookies.json 文件不存在');

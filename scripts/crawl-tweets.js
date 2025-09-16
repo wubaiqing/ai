@@ -7,6 +7,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const { storeTweetDataToSupabase } = require("../src/data/database");
+const { APPLICATION_CONFIG } = require("../src/lib/config.js");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -108,7 +109,7 @@ async function scrapeTwitterListWithAuthentication(
     page.setDefaultNavigationTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
 
     await page.setUserAgent(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      APPLICATION_CONFIG.getUserAgent()
     );
 
     await page.setRequestInterception(true);
