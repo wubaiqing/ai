@@ -1,6 +1,10 @@
 /**
- * X.com 自动登录并保存 Cookies 脚本
- * 使用 Puppeteer 自动化登录 X.com 并保存登录状态的 cookies
+ * X.com 自动登录和Cookie保存脚本
+ * @module TwitterAuthentication
+ * @requires dotenv
+ * @requires puppeteer
+ * @requires fs
+ * @requires path
  */
 
 require('dotenv').config();
@@ -19,10 +23,12 @@ const LOCAL_CONFIG = {
 };
 
 /**
- * 自动登录 Twitter/X.com 并保存认证cookies
- * @param {string} userAccountName - 用户账户名
- * @param {string} userPassword - 用户密码
- * @param {string} userEmail - 用户邮箱（可选，用于二次验证）
+ * 执行X.com自动登录并保存认证Cookie
+ * @param {string} userAccountName - 用户名或邮箱
+ * @param {string} userPassword - 密码
+ * @param {string} userEmail - 邮箱地址
+ * @returns {Promise<boolean>} 登录是否成功
+ * @throws {Error} 登录错误时抛出
  */
 async function authenticateAndSaveCookies(userAccountName, userPassword, userEmail = null) {
   let browserInstance = null;
@@ -148,8 +154,9 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
 }
 
 /**
- * 从环境变量读取用户凭据并执行登录认证
+ * 从环境变量读取认证信息并执行登录
  * @returns {Promise<boolean>} 登录是否成功
+ * @throws {Error} 环境变量缺失或登录失败时抛出
  */
 async function authenticateFromEnvironmentVariables() {
   const environmentUsername = process.env.X_USERNAME;
@@ -167,8 +174,8 @@ async function authenticateFromEnvironmentVariables() {
 }
 
 /**
- * 检查认证cookies文件是否存在且有效
- * @returns {boolean} cookies 是否有效
+ * 检查本地是否存在有效的认证Cookie
+ * @returns {boolean} Cookie是否存在且有效
  */
 function checkAuthenticationCookiesExist() {
   const cookiesStoragePath = path.resolve(__dirname, LOCAL_CONFIG.COOKIES_FILE_PATH);
@@ -194,7 +201,8 @@ function checkAuthenticationCookiesExist() {
 }
 
 /**
- * 主执行函数 - 启动Twitter/X.com自动登录认证流程
+ * 主执行函数 - 完整的认证流程管理
+ * @returns {Promise<void>}
  */
 async function executeAuthenticationProcess() {
   console.log('[启动] Twitter/X.com 自动登录认证脚本');

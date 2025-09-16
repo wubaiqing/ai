@@ -1,15 +1,20 @@
 /**
- * 应用配置管理模块
- * 统一管理环境变量和应用配置
+ * 应用程序配置管理模块
+ * @module ApplicationConfiguration
+ * @requires dotenv
  */
 
 require('dotenv').config();
 
 /**
  * 应用程序配置管理类
- * 负责管理所有环境变量和应用配置项
+ * @class ApplicationConfiguration
  */
 class ApplicationConfiguration {
+  /**
+   * 创建配置管理实例
+   * @constructor
+   */
   constructor() {
     console.log('[配置] 开始初始化应用配置');
     this.validateRequiredEnvironmentVariables();
@@ -17,7 +22,8 @@ class ApplicationConfiguration {
   }
 
   /**
-   * 验证必需的环境变量是否存在
+   * 验证必需的环境变量
+   * @throws {Error} 环境变量缺失时抛出错误
    */
   validateRequiredEnvironmentVariables() {
     const requiredEnvironmentKeys = [
@@ -45,7 +51,8 @@ class ApplicationConfiguration {
   }
 
   /**
-   * 获取 Twitter/X.com 平台相关配置
+   * 获取Twitter相关配置
+   * @returns {Object} Twitter配置对象
    */
   getTwitterConfiguration() {
     const config = {
@@ -61,7 +68,8 @@ class ApplicationConfiguration {
   }
 
   /**
-   * 获取 Supabase 数据库配置
+   * 获取Supabase数据库配置
+   * @returns {Object} Supabase配置对象
    */
   getSupabaseConfiguration() {
     const config = {

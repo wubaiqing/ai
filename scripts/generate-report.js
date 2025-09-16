@@ -1,6 +1,8 @@
 /**
  * AI科技简报生成器 - 主入口文件
- * 重构后的简化版本，使用模块化架构
+ * @module AIReportGenerator
+ * @requires ./src/services/reportGenerator
+ * @requires ./src/lib/config
  */
 
 const { aiReportGenerator } = require('../src/reports/reportGenerator');
@@ -8,9 +10,9 @@ const { applicationConfig, validateEnvironmentVariables } = require('../src/repo
 const { Logger, ErrorHandler } = require('../src/lib/utils');
 
 /**
- * 执行AI简报生成的主函数
- * @param {Object} [options] - 生成选项
+ * 执行AI科技简报生成任务
  * @returns {Promise<void>}
+ * @throws {Error} 生成过程错误时抛出
  */
 async function executeAIReportGeneration(options = {}) {
   const taskStartTime = Date.now();
@@ -78,7 +80,8 @@ function displayApplicationHelp() {
 }
 
 /**
- * 应用程序主入口点
+ * 初始化应用程序
+ * @returns {Promise<void>}
  */
 async function initializeApplication() {
   const commandLineArguments = process.argv.slice(2);

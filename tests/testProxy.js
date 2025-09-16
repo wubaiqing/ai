@@ -1,6 +1,11 @@
 /**
- * 代理配置检查脚本（精简版）
- * 用于验证代理服务器配置和连接状态
+ * 代理配置检查和测试脚本
+ * @module ProxyTester
+ * @requires fs
+ * @requires path
+ * @requires axios
+ * @requires https-proxy-agent
+ * @requires http-proxy-agent
  */
 
 const fs = require('fs');
@@ -16,7 +21,8 @@ const IP_SERVICES = [
 ];
 
 /**
- * 检查代理环境变量配置
+ * 检查代理配置环境变量
+ * @returns {Object} 配置状态和详细信息
  */
 function checkProxyConfig() {
   console.log('\n=== Clash代理配置检查 ===');
@@ -48,7 +54,8 @@ function checkProxyConfig() {
 }
 
 /**
- * 构建代理URL
+ * 构建代理服务器URL
+ * @returns {string|null} 代理URL或null
  */
 function buildProxyUrl() {
   const host = process.env.PROXY_HOST;
@@ -58,7 +65,10 @@ function buildProxyUrl() {
 }
 
 /**
- * 获取IP地址
+ * 获取当前IP地址
+ * @param {Object} [agent] - 代理对象
+ * @returns {Promise<string>} IP地址
+ * @throws {Error} 无法获取IP时抛出
  */
 async function getIP(useProxy = false) {
   console.log(`🌍 检测${useProxy ? '代理' : '直连'}IP地址...`);
@@ -96,7 +106,8 @@ async function getIP(useProxy = false) {
 }
 
 /**
- * 对比直连和代理IP
+ * 对比直连和代理的IP地址
+ * @returns {Promise<Object>} 测试结果和IP信息
  */
 function compareIPs(directResults, proxyResults) {
   console.log('\n📊 IP地址对比:');
@@ -124,7 +135,8 @@ function compareIPs(directResults, proxyResults) {
 }
 
 /**
- * 测试代理连接
+ * 测试代理连接性能
+ * @returns {Promise<Object>} 性能测试结果
  */
 async function testProxy(url, isHttps = false) {
   console.log(`🌐 测试${isHttps ? 'HTTPS' : 'HTTP'}代理连接...`);
@@ -162,6 +174,7 @@ async function testProxy(url, isHttps = false) {
 
 /**
  * 运行所有代理测试
+ * @returns {Promise<void>}
  */
 async function runAllProxyTests() {
   console.log('🚀 开始代理服务器测试\n');
