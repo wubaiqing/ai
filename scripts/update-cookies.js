@@ -7,9 +7,7 @@ require('dotenv').config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
-const config = require("../src/lib/config");
-
-import { APPLICATION_CONFIG } from '../src/lib/config.js';
+const APPLICATION_CONFIG = require("../src/lib/config");
 
 // 应用程序配置常量
 const LOCAL_CONFIG = {
@@ -70,19 +68,27 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
 
     // 点击进入下一步按钮
     console.log("点击进入下一步...");
-    await webPage.click('[role="button"]:has-text("下一步")');
+    await webPage.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('[role="button"]'));
+      const nextButton = buttons.find(btn => btn.textContent.includes('下一步') || btn.textContent.includes('Next'));
+      if (nextButton) nextButton.click();
+    });
 
     // 等待密码输入框或邮箱验证界面加载
     console.log("等待密码输入或验证步骤加载...");
-    await webPage.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // 检查是否需要进行邮箱验证
     const emailVerificationInput = await webPage.$('input[name="text"]');
     if (emailVerificationInput && userEmail) {
       console.log("检测到邮箱验证步骤，正在输入验证邮箱...");
       await webPage.type('input[name="text"]', userEmail, { delay: 100 });
-      await webPage.click('[role="button"]:has-text("下一步")');
-      await webPage.waitForTimeout(2000);
+      await webPage.evaluate(() => {
+         const buttons = Array.from(document.querySelectorAll('[role="button"]'));
+         const nextButton = buttons.find(btn => btn.textContent.includes('下一步') || btn.textContent.includes('Next'));
+         if (nextButton) nextButton.click();
+       });
+       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     // 等待密码输入框加载
@@ -97,7 +103,11 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
 
     // 点击登录确认按钮
     console.log("点击登录确认按钮...");
-    await webPage.click('[role="button"]:has-text("登录")');
+    await webPage.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('[role="button"]'));
+      const loginButton = buttons.find(btn => btn.textContent.includes('登录') || btn.textContent.includes('Log in'));
+      if (loginButton) loginButton.click();
+    });
 
     // 等待登录操作完成
     console.log("等待登录操作完成...");
