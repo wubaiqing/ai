@@ -5,8 +5,7 @@
   "main": "scripts/crawl-tweets.js",
   "scripts": {
     "start": "node scripts/crawl-tweets.js",
-    "dev": "node scripts/crawl-tweets.js",
-    "login": "node scripts/update-cookies.js",
+    "update-cookies": "node scripts/update-cookies.js",
     "generate-report": "node scripts/generate-report.js",
     "test-proxy": "node tests/testProxy.js"
   },
