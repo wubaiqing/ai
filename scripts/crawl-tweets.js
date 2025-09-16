@@ -106,10 +106,10 @@ async function scrapeTwitterListWithAuthentication(listId, maxScrollCount = CONF
     ignoreDefaultArgs: ["--enable-automation"],
   };
 
-  // 简化的代理配置
-  if (process.env.PROXY_ENABLED === 'true' && process.env.PROXY_HOST) {
-    const proxyServer = `${process.env.PROXY_HOST}:${process.env.PROXY_PORT || '8080'}`;
-    console.log(`使用代理服务器: ${proxyServer}`);
+  // Clash代理配置
+  if (process.env.PROXY_HOST) {
+    const proxyServer = `${process.env.PROXY_HOST}:${process.env.PROXY_PORT || '7890'}`;
+    console.log(`使用Clash代理服务器: ${proxyServer}`);
     launchOptions.args.push(`--proxy-server=${proxyServer}`);
     
     // 添加代理相关参数
@@ -129,14 +129,7 @@ async function scrapeTwitterListWithAuthentication(listId, maxScrollCount = CONF
     page.setDefaultTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
     page.setDefaultNavigationTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
 
-    // 代理认证（如果需要）
-    if (process.env.PROXY_ENABLED === 'true' && process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
-      await page.authenticate({
-        username: process.env.PROXY_USERNAME,
-        password: process.env.PROXY_PASSWORD
-      });
-      console.log('代理认证设置成功');
-    }
+    // Clash代理不需要用户名密码认证
 
     // 设置用户代理
     await page.setUserAgent(

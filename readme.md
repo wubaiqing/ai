@@ -53,12 +53,10 @@ X_PASSWORD=your_x_password
 X_EMAIL=your_x_email
 ```
 
-**代理配置**（如需要）
+**Clash代理配置**（如需要）
 ```bash
 PROXY_HOST=127.0.0.1
 PROXY_PORT=7890
-PROXY_USERNAME=optional_username
-PROXY_PASSWORD=optional_password
 ```
 
 ### 3. 启动服务
@@ -150,8 +148,8 @@ A: 在 Supabase 项目设置中找到 API 密钥和项目 URL
 **Q: 硅基流动 API 密钥在哪里获取？**
 A: 访问硅基流动官网注册账号并获取 API 密钥
 
-**Q: 代理配置是必需的吗？**
-A: 不是必需的，仅在网络访问受限时使用
+**Q: Clash代理配置是必需的吗？**
+A: 根据项目要求必须使用代理，配置PROXY_HOST和PROXY_PORT即可，无需用户名密码
 
 ### 运行问题
 
@@ -199,6 +197,114 @@ npm run debug-data-loss
 
 # 测试AI功能
 npm run test-ai
+```
+
+## 🐳 Docker 部署
+
+### 使用 Docker Compose 部署
+
+项目已配置完整的 Docker 容器化支持，特别适配群辉 NAS 环境。
+
+#### 1. 准备环境文件
+
+确保 `.env` 文件已正确配置所有必需的环境变量。
+
+#### 2. 构建和启动服务
+
+```bash
+# 构建并启动服务
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f twitter-data-capture
+```
+
+#### 3. 群辉 NAS 部署指南
+
+**前置要求：**
+- 群辉 NAS 已安装 Docker 套件
+- 确保有足够的存储空间和内存资源
+
+**部署步骤：**
+
+1. **上传项目文件**
+   - 将整个项目文件夹上传到群辉 NAS
+   - 建议放在 `/docker/twitter-data-capture/` 目录下
+
+2. **配置环境变量**
+   - 复制 `.env.example` 为 `.env`
+   - 根据实际情况配置所有环境变量
+
+3. **设置权限**
+   ```bash
+   # SSH 连接到群辉 NAS 后执行
+   sudo chown -R 1000:1000 /docker/twitter-data-capture/
+   ```
+
+4. **启动服务**
+   ```bash
+   cd /docker/twitter-data-capture/
+   docker-compose up -d
+   ```
+
+#### 4. Docker 配置说明
+
+**资源限制：**
+- 内存限制：1GB（预留512MB）
+- CPU限制：0.5核心（预留0.25核心）
+
+**数据持久化：**
+- `./reports` - 报告输出目录
+- `./cookies.json` - 登录状态文件
+- `./logs` - 日志文件目录
+- `./.env` - 环境配置文件
+
+**网络配置：**
+- 使用桥接网络模式
+- 支持代理配置
+
+#### 5. 常用 Docker 命令
+
+```bash
+# 重启服务
+docker-compose restart
+
+# 停止服务
+docker-compose down
+
+# 更新服务
+docker-compose pull
+docker-compose up -d
+
+# 进入容器
+docker-compose exec twitter-data-capture sh
+
+# 查看资源使用情况
+docker stats twitter-data-capture
+```
+
+#### 6. 故障排除
+
+**常见问题：**
+
+- **权限问题**：确保文件权限设置为 1000:1000
+- **内存不足**：调整 docker-compose.yml 中的资源限制
+- **网络问题**：检查代理配置和防火墙设置
+- **存储空间**：确保有足够的磁盘空间用于日志和报告
+
+**调试命令：**
+```bash
+# 查看详细日志
+docker-compose logs --tail=100 twitter-data-capture
+
+# 检查容器健康状态
+docker-compose ps
+
+# 进入容器调试
+docker-compose exec twitter-data-capture sh
 ```
 
 ## 🔒 安全注意事项

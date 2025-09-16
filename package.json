@@ -8,9 +8,7 @@
     "dev": "node scripts/crawl-tweets.js",
     "login": "node scripts/update-cookies.js",
     "generate-report": "node scripts/generate-report.js",
-    "test-report": "node tests/testAIReport.js",
-    "test-api": "node tests/testDeepSeekAPI.js",
-    "check-config": "node tests/checkConfig.js"
+    "test-proxy": "node tests/testProxy.js"
   },
   "keywords": [
     "twitter",
@@ -25,6 +23,8 @@
     "@supabase/supabase-js": "^2.56.0",
     "axios": "^1.12.0",
     "dotenv": "^17.2.1",
+    "http-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.6",
     "pg": "^8.16.3",
     "puppeteer": "^24.19.0"
   }
