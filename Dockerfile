@@ -14,6 +14,9 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont
 
+# 设置Puppeteer中国镜像源以提高下载速度
+ENV PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary
+
 # 告诉Puppeteer跳过下载Chromium，使用系统安装的版本
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser

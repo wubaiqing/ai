@@ -44,9 +44,9 @@ const applicationConfig = {
     temperature: 0.7
   },
 
-  // 报告输出配置
+  // 报告输出配置 - 报告文件保存到项目根目录的 reports/ 目录
   reportOutput: {
-    baseDirectory: path.join(__dirname, '..', 'reports'),
+    baseDirectory: path.join(__dirname, '..', '..', 'reports'), // 项目根目录/reports/
     fileNameTemplate: 'ai-report-{date}.md',
     encoding: 'utf8'
   },

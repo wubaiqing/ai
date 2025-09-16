@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  twitter-data-capture:
+  twitter-ai-reporter:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: twitter-data-capture
+    container_name: twitter-ai-reporter
     restart: unless-stopped
     
     # 环境变量配置
@@ -30,7 +30,7 @@ services:
     
     # 网络配置
     networks:
-      - twitter-network
+      - twitter-ai-network
     
     # 资源限制（适配群辉NAS）
     deploy:
@@ -62,13 +62,13 @@ services:
     
     # 标签
     labels:
-      - "com.docker.compose.project=twitter-data-capture"
-      - "description=Twitter数据采集与AI简报生成系统"
+      - "com.docker.compose.project=twitter-ai-reporter"
+      - "description=Twitter AI智能分析和报告生成系统"
 
 networks:
-  twitter-network:
+  twitter-ai-network:
     driver: bridge
-    name: twitter-network
+    name: twitter-ai-network
 
 # 可选：如果需要数据库服务，可以添加
 # volumes:

@@ -1,6 +1,6 @@
-# X.com 数据采集服务
+# Twitter AI Reporter
 
-一个用于采集和分析 X.com (Twitter) 数据的自动化服务，支持推文爬取、AI 分析和报告生成。
+一个专业的 Twitter/X.com 智能分析和报告生成系统，集成推文采集、AI 分析和自动化报告功能。
 
 ## 功能特性
 
@@ -219,7 +219,7 @@ docker-compose up -d
 docker-compose ps
 
 # 查看日志
-docker-compose logs -f twitter-data-capture
+docker-compose logs -f twitter-ai-reporter
 ```
 
 #### 3. 群辉 NAS 部署指南
@@ -232,7 +232,7 @@ docker-compose logs -f twitter-data-capture
 
 1. **上传项目文件**
    - 将整个项目文件夹上传到群辉 NAS
-   - 建议放在 `/docker/twitter-data-capture/` 目录下
+   - 建议放在 `/docker/twitter-ai-reporter/` 目录下
 
 2. **配置环境变量**
    - 复制 `.env.example` 为 `.env`
@@ -241,12 +241,12 @@ docker-compose logs -f twitter-data-capture
 3. **设置权限**
    ```bash
    # SSH 连接到群辉 NAS 后执行
-   sudo chown -R 1000:1000 /docker/twitter-data-capture/
+   sudo chown -R 1000:1000 /docker/twitter-ai-reporter/
    ```
 
 4. **启动服务**
    ```bash
-   cd /docker/twitter-data-capture/
+   cd /docker/twitter-ai-reporter/
    docker-compose up -d
    ```
 
@@ -280,10 +280,10 @@ docker-compose pull
 docker-compose up -d
 
 # 进入容器
-docker-compose exec twitter-data-capture sh
+docker-compose exec twitter-ai-reporter sh
 
 # 查看资源使用情况
-docker stats twitter-data-capture
+docker stats twitter-ai-reporter
 ```
 
 #### 6. 故障排除
@@ -298,13 +298,13 @@ docker stats twitter-data-capture
 **调试命令：**
 ```bash
 # 查看详细日志
-docker-compose logs --tail=100 twitter-data-capture
+docker-compose logs --tail=100 twitter-ai-reporter
 
 # 检查容器健康状态
 docker-compose ps
 
 # 进入容器调试
-docker-compose exec twitter-data-capture sh
+docker-compose exec twitter-ai-reporter sh
 ```
 
 ## 🔒 安全注意事项
