@@ -59,7 +59,22 @@ PROXY_HOST=127.0.0.1
 PROXY_PORT=7890
 ```
 
+**浏览器配置**
+```bash
+# Chrome/Chromium 可执行文件路径
+# 本地开发环境（macOS）
+CHROME_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+
+# Docker环境或Linux
+CHROME_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# 其他Linux环境
+CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome
+```
+
 ### 3. 启动服务
+
+#### 本地运行
 
 ```bash
 # 推文爬取服务
@@ -71,6 +86,46 @@ node scripts/generate-report.js
 # 更新登录cookies
 node scripts/update-cookies.js
 ```
+
+#### Docker 部署
+
+**前置要求**
+- 确保已安装 Docker 和 Docker Compose
+- 确保项目根目录下存在必要的目录结构
+
+**部署步骤**
+
+1. 创建必要的目录：
+```bash
+# 创建日志和报告目录
+mkdir -p logs reports
+
+# 确保 cookies.json 文件存在（如果不存在会自动创建）
+touch cookies.json
+```
+
+2. 构建并启动容器：
+```bash
+# 构建镜像
+docker compose build
+
+# 启动服务
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+```
+
+3. 停止服务：
+```bash
+docker compose down
+```
+
+**重要说明**
+- docker-compose.yml 使用相对路径进行卷挂载，确保在项目根目录下运行
+- 日志文件将保存在 `./logs` 目录中
+- 生成的报告将保存在 `./reports` 目录中
+- cookies.json 文件用于保持登录状态的持久化
 
 ## 📁 项目结构
 
@@ -169,6 +224,27 @@ A: 系统有自动去重机制，如仍有问题请检查数据库约束
 
 **Q: 推文数据丢失？**
 A: 检查网络连接和错误日志，确认爬取过程是否正常完成
+
+### Docker 部署问题
+
+**Q: 出现 "Bind mount failed: '/volume1/docker/twitter-ai-reporter/logs' does not exist" 错误？**
+A: 这是因为使用了错误的绝对路径。请确保：
+- 在项目根目录下运行 `docker compose` 命令
+- 使用提供的 docker-compose.yml 文件（已配置相对路径）
+- 运行前先创建必要目录：`mkdir -p logs reports`
+
+**Q: Docker 容器启动失败？**
+A: 检查以下几点：
+- 确保 Docker 和 Docker Compose 已正确安装
+- 确保 .env 文件配置正确
+- 检查端口是否被占用
+- 查看容器日志：`docker compose logs`
+
+**Q: 容器内无法访问挂载的文件？**
+A: 检查文件权限和目录结构：
+- 确保 logs、reports 目录存在且可写
+- 检查 cookies.json 文件权限
+- 如在 Linux 系统上，可能需要调整文件所有者：`sudo chown -R 1000:1000 logs reports`
 
 ## 🔧 故障排除
 

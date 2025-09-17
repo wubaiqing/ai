@@ -15,7 +15,7 @@ const APPLICATION_CONFIG = require("../src/lib/config");
 
 // 应用程序配置常量
 const LOCAL_CONFIG = {
-  CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
   COOKIES_FILE_PATH: '../cookies.json',
   LOGIN_OPERATION_TIMEOUT: 30000,
   PAGE_NAVIGATION_TIMEOUT: 10000,
