@@ -39,7 +39,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     
     // 启动浏览器
     browserInstance = await puppeteer.launch({
-      headless: false, // 设置为 false 以便调试观察
+      headless: process.env.HEADLESS !== 'false',
       executablePath: LOCAL_CONFIG.CHROME_EXECUTABLE_PATH,
       args: [
         "--no-sandbox",
