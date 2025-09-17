@@ -12,7 +12,10 @@ RUN apk add --no-cache \
     freetype-dev \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    git \
+    dcron \
+    busybox-suid
 
 # 设置Puppeteer中国镜像源以提高下载速度
 ENV PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary
@@ -33,7 +36,13 @@ RUN npm install -g pnpm && \
 COPY . .
 
 # 创建必要的目录
-RUN mkdir -p reports logs
+RUN mkdir -p reports logs /var/log
+
+# 复制cron配置文件
+COPY crontab /etc/crontabs/root
+
+# 设置cron文件权限
+RUN chmod 0644 /etc/crontabs/root
 
 # 暴露端口（如果需要）
 EXPOSE 3000
@@ -42,5 +51,11 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "console.log('Health check passed')" || exit 1
 
-# 启动命令
-CMD ["npm", "start"]
+# 创建启动脚本
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'crond -f -d 8 &' >> /app/start.sh && \
+    echo 'exec "$@"' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# 启动命令：启动cron服务并运行应用
+CMD ["/app/start.sh", "npm", "start"]
