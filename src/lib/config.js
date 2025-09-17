@@ -5,6 +5,7 @@
  */
 
 require('dotenv').config();
+const Logger = require('./utils').Logger;
 
 /**
  * 应用程序配置管理类
@@ -16,9 +17,9 @@ class ApplicationConfiguration {
    * @constructor
    */
   constructor() {
-    console.log('[配置] 开始初始化应用配置');
+    Logger.info('[配置] 开始初始化应用配置');
     this.validateRequiredEnvironmentVariables();
-    console.log('[配置] 应用配置初始化完成');
+    Logger.info('[配置] 应用配置初始化完成');
   }
 
   /**
@@ -32,22 +33,22 @@ class ApplicationConfiguration {
       'SUPABASE_SERVICE_ROLE_KEY'
     ];
 
-    console.log('[配置] 验证环境变量...');
+    Logger.info('[配置] 验证环境变量...');
     const missingEnvironmentKeys = requiredEnvironmentKeys.filter(environmentKey => {
       const exists = !!process.env[environmentKey];
       if (!exists) {
-        console.error(`[配置] 缺少环境变量: ${environmentKey}`);
+        Logger.error(`[配置] 缺少环境变量: ${environmentKey}`);
       }
       return !exists;
     });
 
     if (missingEnvironmentKeys.length > 0) {
-      console.error('[配置] 环境变量验证失败');
-      console.error('[配置] 请检查 .env 文件是否包含以下变量:', missingEnvironmentKeys.join(', '));
-      console.warn(`警告: 缺少必需的环境变量: ${missingEnvironmentKeys.join(', ')}`);
+      Logger.error('[配置] 环境变量验证失败');
+      Logger.error('[配置] 请检查 .env 文件是否包含以下变量:', missingEnvironmentKeys.join(', '));
+      Logger.warn(`警告: 缺少必需的环境变量: ${missingEnvironmentKeys.join(', ')}`);
     }
 
-    console.log('[配置] 环境变量验证通过');
+    Logger.info('[配置] 环境变量验证通过');
   }
 
   /**
@@ -63,7 +64,7 @@ class ApplicationConfiguration {
     };
     
     // 不记录敏感信息，只记录配置状态
-    console.log('[配置] X.com配置已加载');
+    Logger.info('[配置] X.com配置已加载');
     return config;
   }
 
@@ -79,7 +80,7 @@ class ApplicationConfiguration {
     };
     
     // 不记录敏感信息，只记录配置状态
-    console.log('[配置] Supabase配置已加载');
+    Logger.info('[配置] Supabase配置已加载');
     return config;
   }
 
