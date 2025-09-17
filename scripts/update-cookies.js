@@ -12,6 +12,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const APPLICATION_CONFIG = require("../src/lib/config");
+const { Logger } = require('../src/lib/utils');
 
 // 应用程序配置常量
 const LOCAL_CONFIG = {
@@ -35,7 +36,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
   let webPage = null;
 
   try {
-    console.log('正在启动浏览器实例...');
+    Logger.info('正在启动浏览器实例...');
     
     // 启动浏览器
     browserInstance = await puppeteer.launch({
@@ -56,24 +57,24 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     await webPage.setViewport(LOCAL_CONFIG.BROWSER_VIEWPORT);
     await webPage.setUserAgent(APPLICATION_CONFIG.getUserAgent());
 
-    console.log("正在导航到 Twitter/X.com 登录页面...");
+    Logger.info("正在导航到 Twitter/X.com 登录页面...");
     await webPage.goto("https://x.com/i/flow/login", {
       waitUntil: "networkidle2",
       timeout: LOCAL_CONFIG.PAGE_NAVIGATION_TIMEOUT,
     });
 
     // 等待用户名输入框加载完成
-    console.log("等待用户名输入框加载...");
+    Logger.info("等待用户名输入框加载...");
     await webPage.waitForSelector('input[name="text"]', {
       timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
     });
 
     // 填入用户账户名
-    console.log("正在输入用户账户名...");
+    Logger.info("正在输入用户账户名...");
     await webPage.type('input[name="text"]', userAccountName, { delay: 100 });
 
     // 点击进入下一步按钮
-    console.log("点击进入下一步...");
+    Logger.info("点击进入下一步...");
     await webPage.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('[role="button"]'));
       const nextButton = buttons.find(btn => btn.textContent.includes('下一步') || btn.textContent.includes('Next'));
@@ -81,13 +82,13 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     });
 
     // 等待密码输入框或邮箱验证界面加载
-    console.log("等待密码输入或验证步骤加载...");
+    Logger.info("等待密码输入或验证步骤加载...");
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // 检查是否需要进行邮箱验证
     const emailVerificationInput = await webPage.$('input[name="text"]');
     if (emailVerificationInput && userEmail) {
-      console.log("检测到邮箱验证步骤，正在输入验证邮箱...");
+      Logger.info("检测到邮箱验证步骤，正在输入验证邮箱...");
       await webPage.type('input[name="text"]', userEmail, { delay: 100 });
       await webPage.evaluate(() => {
          const buttons = Array.from(document.querySelectorAll('[role="button"]'));
@@ -98,17 +99,17 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     }
 
     // 等待密码输入框加载
-    console.log("等待密码输入框加载...");
+    Logger.info("等待密码输入框加载...");
     await webPage.waitForSelector('input[name="password"]', {
       timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
     });
 
     // 填入用户密码
-    console.log("正在输入用户密码...");
+    Logger.info("正在输入用户密码...");
     await webPage.type('input[name="password"]', userPassword, { delay: 100 });
 
     // 点击登录确认按钮
-    console.log("点击登录确认按钮...");
+    Logger.info("点击登录确认按钮...");
     await webPage.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('[role="button"]'));
       const loginButton = buttons.find(btn => btn.textContent.includes('登录') || btn.textContent.includes('Log in'));
@@ -116,38 +117,38 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     });
 
     // 等待登录操作完成
-    console.log("等待登录操作完成...");
+    Logger.info("等待登录操作完成...");
     await webPage.waitForNavigation({ waitUntil: "networkidle2", timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT });
     
     // 检查是否登录成功（通过URL判断）
     const currentUrl = webPage.url();
     if (currentUrl.includes('home') || currentUrl === 'https://x.com/') {
-      console.log('用户登录认证成功！');
+      Logger.info('用户登录认证成功！');
       
       // 获取认证cookies数据
-      console.log("正在获取认证cookies数据...");
+      Logger.info("正在获取认证cookies数据...");
       const authenticationCookies = await webPage.cookies();
       
       // 将cookies数据保存到本地文件
-      console.log("正在保存cookies数据到本地文件...");
+      Logger.info("正在保存cookies数据到本地文件...");
       const cookiesStoragePath = path.resolve(__dirname, LOCAL_CONFIG.COOKIES_FILE_PATH);
       fs.writeFileSync(cookiesStoragePath, JSON.stringify(authenticationCookies, null, 2));
       
-      console.log(`认证Cookies已成功保存到: ${cookiesStoragePath}`);
-      console.log(`共保存了 ${authenticationCookies.length} 个 cookies`);
+      Logger.info(`认证Cookies已成功保存到: ${cookiesStoragePath}`);
+      Logger.info(`共保存了 ${authenticationCookies.length} 个 cookies`);
       
       return true;
     } else {
-      console.error('用户登录认证失败，当前页面:', currentUrl);
+      Logger.error('用户登录认证失败，当前页面:', { currentUrl });
       return false;
     }
     
   } catch (error) {
-    console.error('用户登录认证失败:', error.message);
+    Logger.error('用户登录认证失败:', { error: error.message });
     return false;
   } finally {
     if (browserInstance) {
-      console.log('浏览器实例已关闭');
+      Logger.info('浏览器实例已关闭');
       await browserInstance.close();
     }
   }
@@ -164,12 +165,12 @@ async function authenticateFromEnvironmentVariables() {
   const environmentEmail = process.env.X_EMAIL;
   
   if (!environmentUsername || !environmentPassword) {
-    console.error('[登录] 缺少登录凭据');
-    console.error('请在 .env 文件中设置 X_USERNAME 和 X_PASSWORD 环境变量');
+    Logger.error('[登录] 缺少登录凭据');
+    Logger.error('请在 .env 文件中设置 X_USERNAME 和 X_PASSWORD 环境变量');
     return false;
   }
   
-  console.log(`使用环境变量进行用户认证: ${environmentUsername}`);
+  Logger.info(`使用环境变量进行用户认证: ${environmentUsername}`);
   return await authenticateAndSaveCookies(environmentUsername, environmentPassword, environmentEmail);
 }
 
@@ -181,21 +182,21 @@ function checkAuthenticationCookiesExist() {
   const cookiesStoragePath = path.resolve(__dirname, LOCAL_CONFIG.COOKIES_FILE_PATH);
   
   if (!fs.existsSync(cookiesStoragePath)) {
-    console.log('[检查] cookies.json 文件不存在');
+    Logger.info('[检查] cookies.json 文件不存在');
     return false;
   }
   
   try {
       const storedCookies = JSON.parse(fs.readFileSync(cookiesStoragePath, 'utf-8'));
       if (!Array.isArray(storedCookies) || storedCookies.length === 0) {
-        console.log('[检查] 认证cookies文件为空或格式错误');
+        Logger.warn('[检查] 认证cookies文件为空或格式错误');
         return false;
       }
       
-      console.log(`[检查] 找到 ${storedCookies.length} 个有效cookies`);
+      Logger.info(`[检查] 找到 ${storedCookies.length} 个有效cookies`);
       return true;
     } catch (error) {
-      console.log('[检查] 认证cookies文件格式错误:', error.message);
+      Logger.error('[检查] 认证cookies文件格式错误:', { error: error.message });
       return false;
     }
 }
@@ -205,11 +206,11 @@ function checkAuthenticationCookiesExist() {
  * @returns {Promise<void>}
  */
 async function executeAuthenticationProcess() {
-  console.log('[启动] Twitter/X.com 自动登录认证脚本');
+  Logger.info('[启动] Twitter/X.com 自动登录认证脚本');
   
   // 检查是否已存在有效的认证cookies
   if (checkAuthenticationCookiesExist()) {
-    console.log('[提示] 已存在有效cookies文件，如需重新登录请删除 cookies.json 文件');
+    Logger.info('[提示] 已存在有效cookies文件，如需重新登录请删除 cookies.json 文件');
     process.exit(0);
   }
   
@@ -217,10 +218,10 @@ async function executeAuthenticationProcess() {
   const authenticationSuccess = await authenticateFromEnvironmentVariables();
   
   if (authenticationSuccess) {
-    console.log('[完成] 用户登录认证成功，cookies数据已保存');
+    Logger.info('[完成] 用户登录认证成功，cookies数据已保存');
     process.exit(0);
   } else {
-    console.log('[失败] 用户登录认证失败');
+    Logger.error('[失败] 用户登录认证失败');
     process.exit(1);
   }
 }

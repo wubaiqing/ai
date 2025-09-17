@@ -16,12 +16,76 @@
  */
 
 const { applicationConfig } = require('../reports/reportConfig');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * 应用程序日志记录工具类
  * @class Logger
  */
 class Logger {
+  /**
+   * 获取日志文件路径
+   * @param {Date} [date=new Date()] - 日期对象
+   * @returns {string} 日志文件路径
+   */
+  static getLogFilePath(date = new Date()) {
+    const projectRoot = path.resolve(__dirname, '../..');
+    const logsDir = path.join(projectRoot, 'logs');
+    
+    // 确保logs目录存在
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+    
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD格式
+    return path.join(logsDir, `${dateStr}.log`);
+  }
+
+  /**
+   * 写入日志到文件
+   * @param {string} logEntry - 日志条目
+   */
+  static writeToFile(logEntry) {
+    try {
+      const logFilePath = this.getLogFilePath();
+      fs.appendFileSync(logFilePath, logEntry + '\n', 'utf8');
+    } catch (error) {
+      console.error('写入日志文件失败:', error.message);
+    }
+  }
+
+  /**
+   * 清理过期日志文件
+   * @param {number} [daysToKeep=30] - 保留天数
+   */
+  static cleanupOldLogs(daysToKeep = 30) {
+    try {
+      const projectRoot = path.resolve(__dirname, '../..');
+      const logsDir = path.join(projectRoot, 'logs');
+      
+      if (!fs.existsSync(logsDir)) return;
+      
+      const files = fs.readdirSync(logsDir);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+      
+      files.forEach(file => {
+        if (file.endsWith('.log')) {
+          const filePath = path.join(logsDir, file);
+          const stats = fs.statSync(filePath);
+          
+          if (stats.mtime < cutoffDate) {
+            fs.unlinkSync(filePath);
+            console.log(`已删除过期日志文件: ${file}`);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('清理日志文件失败:', error.message);
+    }
+  }
+
   /**
    * 通用日志记录方法
    * @param {string} logLevel - 日志级别
@@ -30,21 +94,25 @@ class Logger {
    */
   static log(logLevel, message, metadata = {}) {
     const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [${logLevel}] ${message}`;
+    const metadataStr = Object.keys(metadata).length > 0 ? ` ${JSON.stringify(metadata)}` : '';
+    const logEntry = `[${timestamp}] [${logLevel}] ${message}${metadataStr}`;
     
-    // 根据日志级别选择输出方式
+    // 输出到控制台
     switch (logLevel) {
       case applicationConfig.logging.levels.ERROR:
-        console.error(logEntry, metadata);
+        console.error(logEntry);
         break;
       case applicationConfig.logging.levels.WARN:
-        console.warn(logEntry, metadata);
+        console.warn(logEntry);
         break;
       case applicationConfig.logging.levels.INFO:
       default:
-        console.log(logEntry, metadata);
+        console.log(logEntry);
         break;
     }
+    
+    // 写入到文件
+    this.writeToFile(logEntry);
   }
 
   /**

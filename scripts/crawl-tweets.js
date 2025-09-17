@@ -12,6 +12,7 @@ const fs = require("fs");
 const path = require("path");
 const { storeTweetDataToSupabase } = require("../src/data/database");
 const APPLICATION_CONFIG = require("../src/lib/config.js");
+const { Logger } = require("../src/lib/utils");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
@@ -58,11 +59,11 @@ async function handleShowMoreButtons(page) {
     });
 
     if (clickResult > 0) {
-      console.log(`成功点击 ${clickResult} 个Show more按钮`);
+      Logger.info(`成功点击 ${clickResult} 个Show more按钮`);
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   } catch (error) {
-    console.log(`处理Show more按钮时出错: ${error.message}`);
+    Logger.warn(`处理Show more按钮时出错: ${error.message}`);
   }
 }
 
@@ -82,7 +83,7 @@ async function scrapeTwitterListWithAuthentication(
   }
 
   const targetUrl = `https://x.com/i/lists/${listId}`;
-  console.log(`开始爬取推特列表: ${listId}`);
+  Logger.info(`开始爬取推特列表: ${listId}`);
 
   const launchOptions = {
     headless: process.env.HEADLESS !== 'false',
@@ -102,11 +103,11 @@ async function scrapeTwitterListWithAuthentication(
 
   if (process.env.PROXY_HOST) {
     const proxyServer = `${process.env.PROXY_HOST}:${process.env.PROXY_PORT || "7890"}`;
-    console.log(`使用代理: ${proxyServer}`);
+    Logger.info(`使用代理: ${proxyServer}`);
     launchOptions.args.push(`--proxy-server=${proxyServer}`, "--ignore-certificate-errors");
   }
 
-  console.log("启动浏览器...");
+  Logger.info("启动浏览器...");
   const browser = await puppeteer.launch(launchOptions);
   const page = await browser.newPage();
 
@@ -136,9 +137,9 @@ async function scrapeTwitterListWithAuthentication(
     }));
 
     await page.setCookie(...formattedCookies);
-    console.log("Cookies设置成功");
+    Logger.info("Cookies设置成功");
 
-    console.log(`访问页面: ${targetUrl}`);
+    Logger.info(`访问页面: ${targetUrl}`);
     await page.goto(targetUrl, {
       waitUntil: "networkidle2",
       timeout: CONFIG.PAGE_LOAD_TIMEOUT,
@@ -157,16 +158,16 @@ async function scrapeTwitterListWithAuthentication(
           acceptButton.click();
         }
       });
-      console.log("已处理cookie同意弹窗");
+      Logger.info("已处理cookie同意弹窗");
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.log("未发现cookie弹窗或已处理");
+      Logger.info("未发现cookie弹窗或已处理");
     }
 
     await page.waitForSelector('article [data-testid="tweetText"]', {
       timeout: CONFIG.PAGE_LOAD_TIMEOUT,
     });
-    console.log("页面加载成功");
+    Logger.info("页面加载成功");
 
     // 滚动页面并收集推文数据
     let collectedTweets = [];
@@ -174,7 +175,7 @@ async function scrapeTwitterListWithAuthentication(
     let consecutiveEmptyScrolls = 0;
     let currentScrollCount = 0;
 
-    console.log("开始收集推文数据...");
+    Logger.info("开始收集推文数据...");
 
     while (currentScrollCount < maxScrollCount) {
       // 处理Show more按钮
@@ -219,13 +220,13 @@ async function scrapeTwitterListWithAuthentication(
       });
 
       collectedTweets = Array.from(uniqueTweetMap.values());
-      console.log(`当前已收集 ${collectedTweets.length} 条推文`);
+      Logger.info(`当前已收集 ${collectedTweets.length} 条推文`);
 
       // 检查是否有新推文
       if (collectedTweets.length === previousTweetCount) {
         consecutiveEmptyScrolls++;
         if (consecutiveEmptyScrolls >= CONFIG.CONSECUTIVE_EMPTY_SCROLL_LIMIT) {
-          console.log(
+          Logger.info(
             `连续${CONFIG.CONSECUTIVE_EMPTY_SCROLL_LIMIT}次滚动没有发现新推文，可能已到达列表底部`
           );
           break;
@@ -248,7 +249,7 @@ async function scrapeTwitterListWithAuthentication(
       currentScrollCount++;
     }
 
-    console.log(`爬取完成，共获取 ${collectedTweets.length} 条推文`);
+    Logger.info(`爬取完成，共获取 ${collectedTweets.length} 条推文`);
 
     if (collectedTweets.length > 0) {
       const databaseReadyTweets = collectedTweets.map((tweet) => ({
@@ -259,14 +260,14 @@ async function scrapeTwitterListWithAuthentication(
       }));
 
       await storeTweetDataToSupabase(databaseReadyTweets);
-      console.log(`成功存储 ${collectedTweets.length} 条推文到数据库`);
+      Logger.info(`成功存储 ${collectedTweets.length} 条推文到数据库`);
     } else {
-      console.log("未获取到推文数据");
+      Logger.warn("未获取到推文数据");
     }
 
     return collectedTweets;
   } catch (error) {
-    console.error("爬取过程中发生错误:", error.message);
+    Logger.error("爬取过程中发生错误:", { error: error.message });
     throw error;
   } finally {
     // 确保浏览器被关闭
@@ -279,13 +280,13 @@ async function executeTwitterScrapingTask() {
   const testScrollCount = 200;
 
   try {
-    console.log("=== 推文爬取服务启动 ===");
+    Logger.info("=== 推文爬取服务启动 ===");
     const scrapedTweets = await scrapeTwitterListWithAuthentication(defaultListId, testScrollCount);
-    console.log("=== 爬取任务完成 ===");
-    console.log(`总计获取: ${scrapedTweets.length} 条推文`);
+    Logger.info("=== 爬取任务完成 ===");
+    Logger.info(`总计获取: ${scrapedTweets.length} 条推文`);
   } catch (error) {
-    console.error("=== 爬取任务失败 ===");
-    console.error("错误:", error.message);
+    Logger.error("=== 爬取任务失败 ===");
+    Logger.error("错误:", { error: error.message });
     process.exit(1);
   }
 }

@@ -29,18 +29,18 @@ async function executeAIReportGeneration(options = {}) {
     const totalExecutionTime = Date.now() - taskStartTime;
     
     if (generationResult.success) {
-      console.log('\n✅ AI简报生成成功！');
-      console.log(`📄 报告路径: ${generationResult.filePath}`);
-      console.log(`📊 处理推文数量: ${generationResult.metadata.tweetsProcessed}`);
-      console.log(`⏱️  生成耗时: ${generationResult.summary.duration}`);
+      Logger.info('\n✅ AI简报生成成功！');
+      Logger.info(`📄 报告路径: ${generationResult.filePath}`);
+      Logger.info(`📊 处理推文数量: ${generationResult.metadata.tweetsProcessed}`);
+      Logger.info(`⏱️  生成耗时: ${generationResult.summary.duration}`);
       
       if (options.showContent) {
-        console.log('\n=== 生成的简报内容 ===');
-        console.log(generationResult.reportContent);
-        console.log('=== 简报内容结束 ===\n');
+        Logger.info('\n=== 生成的简报内容 ===');
+        Logger.info(generationResult.reportContent);
+        Logger.info('=== 简报内容结束 ===\n');
       }
     } else {
-      console.error('\n❌ AI简报生成失败:', generationResult.error);
+      Logger.error('\n❌ AI简报生成失败:', { error: generationResult.error });
       process.exit(1);
     }
     
@@ -51,7 +51,7 @@ async function executeAIReportGeneration(options = {}) {
       error: error.message,
       executionTimeMs: totalExecutionTime
     });
-    console.error('\n❌ AI简报生成失败:', error.message);
+    Logger.error('\n❌ AI简报生成失败:', { error: error.message });
     process.exit(1);
   }
 }
@@ -60,7 +60,7 @@ async function executeAIReportGeneration(options = {}) {
  * 显示应用程序帮助信息
  */
 function displayApplicationHelp() {
-  console.log(`
+  Logger.info(`
 使用方法: node scripts/generate-report.js [选项]
 
 选项:
@@ -93,7 +93,7 @@ async function initializeApplication() {
   }
   
   if (commandLineArguments.includes('-v') || commandLineArguments.includes('--version')) {
-    console.log('AI简报生成器 v1.0.0');
+    Logger.info('AI简报生成器 v1.0.0');
     return;
   }
   
@@ -107,7 +107,7 @@ async function initializeApplication() {
 // 如果直接运行此文件，则执行主程序
 if (require.main === module) {
   initializeApplication().catch(error => {
-    console.error('程序执行失败:', error.message);
+    Logger.error('程序执行失败:', { error: error.message });
     process.exit(1);
   });
 }
