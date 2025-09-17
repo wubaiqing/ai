@@ -44,9 +44,6 @@ COPY crontab /etc/crontabs/root
 # 设置cron文件权限
 RUN chmod 0644 /etc/crontabs/root
 
-# 暴露端口（如果需要）
-EXPOSE 3000
-
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "console.log('Health check passed')" || exit 1
