@@ -14,7 +14,7 @@ const { storeTweetDataToSupabase } = require("../src/data/database");
 const APPLICATION_CONFIG = require("../src/lib/config.js");
 
 const CONFIG = {
-  CHROME_EXECUTABLE_PATH: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
   COOKIES_FILE_PATH: "../cookies.json",
   DEFAULT_MAX_SCROLL_COUNT: 100,
   PAGE_LOAD_TIMEOUT: 60000,

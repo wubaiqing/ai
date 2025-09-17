@@ -23,7 +23,7 @@ services:
       - ./reports:/app/reports
       # cookies文件持久化
       - ./cookies.json:/app/cookies.json
-      # 日志目录（可选）
+      # 日志目录（使用相对路径，确保在任何环境中都能正常工作）
       - ./logs:/app/logs
       # 配置文件（如果需要动态修改）
       - ./.env:/app/.env:ro
@@ -37,10 +37,10 @@ services:
       resources:
         limits:
           memory: 1G
-          cpus: '0.5'
+          # cpus: '0.5'  # 注释掉CPU限制，避免NanoCPUs错误
         reservations:
           memory: 512M
-          cpus: '0.25'
+          # cpus: '0.25'  # 注释掉CPU预留，避免NanoCPUs错误
     
     # 健康检查
     healthcheck:
