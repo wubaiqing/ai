@@ -85,7 +85,7 @@ async function scrapeTwitterListWithAuthentication(
   console.log(`开始爬取推特列表: ${listId}`);
 
   const launchOptions = {
-    headless: false,
+    headless: process.env.HEADLESS !== 'false',
     executablePath: CONFIG.CHROME_EXECUTABLE_PATH,
     defaultViewport: null,
     timeout: CONFIG.PAGE_LOAD_TIMEOUT,
@@ -276,7 +276,7 @@ async function scrapeTwitterListWithAuthentication(
 
 async function executeTwitterScrapingTask() {
   const defaultListId = "1950374938378113192";
-  const testScrollCount = 10;
+  const testScrollCount = 200;
 
   try {
     console.log("=== 推文爬取服务启动 ===");
