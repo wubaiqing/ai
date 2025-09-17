@@ -13,6 +13,7 @@ const path = require('path');
 const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { HttpProxyAgent } = require('http-proxy-agent');
+const Logger = require('../src/lib/utils').Logger;
 
 // IP检测服务列表（精简为2个可靠服务）
 const IP_SERVICES = [
@@ -25,11 +26,11 @@ const IP_SERVICES = [
  * @returns {Object} 配置状态和详细信息
  */
 function checkProxyConfig() {
-  console.log('\n=== Clash代理配置检查 ===');
+  Logger.info('\n=== Clash代理配置检查 ===');
   
   const envPath = path.join(__dirname, '..', '.env');
   if (!fs.existsSync(envPath)) {
-    console.error('❌ .env文件不存在');
+    Logger.error('❌ .env文件不存在');
     return false;
   }
   
@@ -37,19 +38,19 @@ function checkProxyConfig() {
   
   const requiredVars = ['PROXY_HOST', 'PROXY_PORT'];
   
-  console.log('必需的环境变量:');
+  Logger.info('必需的环境变量:');
   requiredVars.forEach(varName => {
     const value = process.env[varName];
-    console.log(`  ${varName}: ${value ? '✓' : '✗'} ${value || '未设置'}`);
+    Logger.info(`  ${varName}: ${value ? '✓' : '✗'} ${value || '未设置'}`);
   });
   
   const missingRequired = requiredVars.filter(varName => !process.env[varName]);
   if (missingRequired.length > 0) {
-    console.log(`\n❌ 缺少必需的环境变量: ${missingRequired.join(', ')}`);
+    Logger.error(`\n❌ 缺少必需的环境变量: ${missingRequired.join(', ')}`);
     return false;
   }
   
-  console.log('\n✅ Clash代理配置检查通过');
+  Logger.info('\n✅ Clash代理配置检查通过');
   return true;
 }
 
@@ -71,7 +72,7 @@ function buildProxyUrl() {
  * @throws {Error} 无法获取IP时抛出
  */
 async function getIP(useProxy = false) {
-  console.log(`🌍 检测${useProxy ? '代理' : '直连'}IP地址...`);
+  Logger.info(`🌍 检测${useProxy ? '代理' : '直连'}IP地址...`);
   const results = [];
   
   for (const service of IP_SERVICES) {
@@ -94,11 +95,11 @@ async function getIP(useProxy = false) {
       
       if (ip) {
         results.push({ service: service.name, ip, success: true });
-        console.log(`   ✅ ${service.name}: ${ip}`);
+        Logger.info(`   ✅ ${service.name}: ${ip}`);
       }
     } catch (error) {
       results.push({ service: service.name, ip: null, success: false, error: error.message });
-      console.log(`   ❌ ${service.name}: ${error.message}`);
+      Logger.error(`   ❌ ${service.name}: ${error.message}`);
     }
   }
   
@@ -110,26 +111,26 @@ async function getIP(useProxy = false) {
  * @returns {Promise<Object>} 测试结果和IP信息
  */
 function compareIPs(directResults, proxyResults) {
-  console.log('\n📊 IP地址对比:');
+  Logger.info('\n📊 IP地址对比:');
   
   const directIPs = directResults.filter(r => r.success).map(r => r.ip);
   const proxyIPs = proxyResults.filter(r => r.success).map(r => r.ip);
   
   if (directIPs.length === 0) {
-    console.log('❌ 无法获取直连IP地址');
+    Logger.error('❌ 无法获取直连IP地址');
     return false;
   }
   
   if (proxyIPs.length === 0) {
-    console.log('❌ 无法获取代理IP地址');
+    Logger.error('❌ 无法获取代理IP地址');
     return false;
   }
   
-  console.log(`直连IP: ${directIPs.join(', ')}`);
-  console.log(`代理IP: ${proxyIPs.join(', ')}`);
+  Logger.info(`直连IP: ${directIPs.join(', ')}`);
+  Logger.info(`代理IP: ${proxyIPs.join(', ')}`);
   
   const proxyWorking = !directIPs.some(ip => proxyIPs.includes(ip));
-  console.log(proxyWorking ? '✅ 代理生效' : '❌ 代理未生效');
+  Logger.info(proxyWorking ? '✅ 代理生效' : '❌ 代理未生效');
   
   return proxyWorking;
 }
@@ -139,7 +140,7 @@ function compareIPs(directResults, proxyResults) {
  * @returns {Promise<Object>} 性能测试结果
  */
 async function testProxy(url, isHttps = false) {
-  console.log(`🌐 测试${isHttps ? 'HTTPS' : 'HTTP'}代理连接...`);
+  Logger.info(`🌐 测试${isHttps ? 'HTTPS' : 'HTTP'}代理连接...`);
   
   try {
     const proxyUrl = buildProxyUrl();
@@ -160,12 +161,12 @@ async function testProxy(url, isHttps = false) {
     const response = await axios.get(url, config);
     
     if (response.status === 200) {
-      console.log(`✅ ${isHttps ? 'HTTPS' : 'HTTP'}代理连接成功`);
+      Logger.info(`✅ ${isHttps ? 'HTTPS' : 'HTTP'}代理连接成功`);
       return true;
     }
     return false;
   } catch (error) {
-    console.log(`❌ ${isHttps ? 'HTTPS' : 'HTTP'}代理连接失败: ${error.message}`);
+    Logger.error(`❌ ${isHttps ? 'HTTPS' : 'HTTP'}代理连接失败: ${error.message}`);
     return false;
   }
 }
@@ -177,42 +178,42 @@ async function testProxy(url, isHttps = false) {
  * @returns {Promise<void>}
  */
 async function runAllProxyTests() {
-  console.log('🚀 开始代理服务器测试\n');
+  Logger.info('🚀 开始代理服务器测试\n');
   
   // 1. 检查代理配置
-  console.log('📋 检查代理配置...');
+  Logger.info('📋 检查代理配置...');
   const configValid = checkProxyConfig();
   if (!configValid) {
-    console.log('❌ 代理配置检查失败');
+    Logger.error('❌ 代理配置检查失败');
     return false;
   }
   
   // 2. IP检测测试
-  console.log('\n🔍 IP检测测试...');
+  Logger.info('\n🔍 IP检测测试...');
   const directIP = await getIP();
   const proxyIP = await getIP(true);
   
   if (!directIP || !proxyIP) {
-    console.log('❌ IP检测失败');
+    Logger.error('❌ IP检测失败');
     return false;
   }
   
   const ipResult = compareIPs(directIP, proxyIP);
   
   // 3. 代理连接测试
-  console.log('\n🌐 代理连接测试...');
+  Logger.info('\n🌐 代理连接测试...');
   const httpResult = await testProxy('http://www.baidu.com', false);
   const httpsResult = await testProxy('https://www.google.com', true);
   
   // 4. 测试结果
-  console.log('\n📊 测试结果:');
-  console.log(`代理配置: ${configValid ? '✅' : '❌'}`);
-  console.log(`IP检测: ${ipResult ? '✅' : '❌'}`);
-  console.log(`HTTP代理: ${httpResult ? '✅' : '❌'}`);
-  console.log(`HTTPS代理: ${httpsResult ? '✅' : '❌'}`);
+  Logger.info('\n📊 测试结果:');
+  Logger.info(`代理配置: ${configValid ? '✅' : '❌'}`);
+  Logger.info(`IP检测: ${ipResult ? '✅' : '❌'}`);
+  Logger.info(`HTTP代理: ${httpResult ? '✅' : '❌'}`);
+  Logger.info(`HTTPS代理: ${httpsResult ? '✅' : '❌'}`);
   
   const allPassed = configValid && ipResult && httpResult && httpsResult;
-  console.log(`\n${allPassed ? '🎉 所有测试通过！' : '⚠️ 部分测试失败'}`);
+  Logger.info(`\n${allPassed ? '🎉 所有测试通过！' : '⚠️ 部分测试失败'}`);
   
   return allPassed;
 }
@@ -220,7 +221,7 @@ async function runAllProxyTests() {
 // 运行测试
 if (require.main === module) {
   runAllProxyTests().catch(error => {
-    console.error('测试失败:', error.message);
+    Logger.error('测试失败:', { error: error.message });
     process.exit(1);
   });
 }
