@@ -1,0 +1,9 @@
+# Twitter AI Reporter 定时任务配置
+# 每天上午9点执行爬取推文任务
+0 9 * * * cd /app && npm start >> /var/log/cron.log 2>&1
+
+# 每天下午4点执行爬取推文任务
+0 16 * * * cd /app && npm start >> /var/log/cron.log 2>&1
+
+# 每天晚上11点生成报告
+0 23 * * * cd /app && npm run generate-report >> /var/log/cron.log 2>&1
