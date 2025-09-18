@@ -17,15 +17,15 @@ services:
     env_file:
       - .env
     
-    # 数据卷挂载
     volumes:
-      # 报告输出目录
+      # 报告输出目录同步
       - ./reports:/app/reports
-      # cookies文件持久化
-      - ./cookies.json:/app/cookies.json
-      # 日志目录（使用相对路径，确保在任何环境中都能正常工作）
+      
+      # 日志目录同步  
       - ./logs:/app/logs
-      # 配置文件（如果需要动态修改）
+      
+      # 其他重要文件同步
+      - ./cookies.json:/app/cookies.json
       - ./.env:/app/.env:ro
     
     # 网络配置
@@ -42,13 +42,13 @@ services:
           memory: 512M
           # cpus: '0.25'  # 注释掉CPU预留，避免NanoCPUs错误
     
-    # 健康检查
-    healthcheck:
-      test: ["CMD", "node", "-e", "console.log('Health check passed')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # 健康检查（已注释）
+    # healthcheck:
+    #   test: ["CMD", "node", "-e", "console.log('Health check passed')"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
     
     # 安全配置
     security_opt:
