@@ -1,65 +1,52 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  twitter-ai-reporter:
+  twitter-ai:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: twitter-ai-reporter
+    container_name: reporter
     restart: unless-stopped
-    
+
     # 环境变量配置
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
-    
+
     # 环境变量文件
     env_file:
       - .env
-    
+
     volumes:
       # 报告输出目录同步
       - ./reports:/app/reports
-      
-      # 日志目录同步  
+
+      # 日志目录同步
       - ./logs:/app/logs
-      
+
       # 其他重要文件同步
       - ./cookies.json:/app/cookies.json
       - ./.env:/app/.env:ro
-    
+
     # 网络配置
     networks:
       - twitter-ai-network
-    
+
     # 资源限制（适配群辉NAS）
     deploy:
       resources:
         limits:
           memory: 1G
-          # cpus: '0.5'  # 注释掉CPU限制，避免NanoCPUs错误
         reservations:
           memory: 512M
-          # cpus: '0.25'  # 注释掉CPU预留，避免NanoCPUs错误
-    
-    # 健康检查（已注释）
-    # healthcheck:
-    #   test: ["CMD", "node", "-e", "console.log('Health check passed')"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 40s
-    
+
     # 安全配置
     security_opt:
       - no-new-privileges:true
-    
-    # 用户配置（适配群辉NAS权限）
-    user: "1000:1000"
-    
+
     # 工作目录
     working_dir: /app
-    
+
     # 标签
     labels:
       - "com.docker.compose.project=twitter-ai-reporter"
@@ -69,8 +56,3 @@ networks:
   twitter-ai-network:
     driver: bridge
     name: twitter-ai-network
-
-# 可选：如果需要数据库服务，可以添加
-# volumes:
-#   twitter_data:
-#     driver: local
