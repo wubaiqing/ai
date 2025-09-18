@@ -37,9 +37,16 @@ function checkProxyConfig() {
   require('dotenv').config({ path: envPath });
   
   const requiredVars = ['PROXY_HOST', 'PROXY_PORT'];
+  const optionalVars = ['PROXY_USERNAME', 'PROXY_PASSWORD'];
   
   Logger.info('必需的环境变量:');
   requiredVars.forEach(varName => {
+    const value = process.env[varName];
+    Logger.info(`  ${varName}: ${value ? '✓' : '✗'} ${value || '未设置'}`);
+  });
+  
+  Logger.info('可选的认证环境变量:');
+  optionalVars.forEach(varName => {
     const value = process.env[varName];
     Logger.info(`  ${varName}: ${value ? '✓' : '✗'} ${value || '未设置'}`);
   });

@@ -203,8 +203,8 @@ A: 在 Supabase 项目设置中找到 API 密钥和项目 URL
 **Q: 硅基流动 API 密钥在哪里获取？**
 A: 访问硅基流动官网注册账号并获取 API 密钥
 
-**Q: Clash代理配置是必需的吗？**
-A: 根据项目要求必须使用代理，配置PROXY_HOST和PROXY_PORT即可，无需用户名密码
+**Q: 代理配置是必需的吗？**
+A: 根据项目要求必须使用代理，配置PROXY_HOST和PROXY_PORT即可。如果代理需要认证，还需要配置PROXY_USERNAME和PROXY_PASSWORD
 
 ### 运行问题
 

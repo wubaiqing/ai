@@ -102,8 +102,20 @@ async function scrapeTwitterListWithAuthentication(
   };
 
   if (process.env.PROXY_HOST) {
-    const proxyServer = `${process.env.PROXY_HOST}:${process.env.PROXY_PORT || "7890"}`;
-    Logger.info(`使用代理: ${proxyServer}`);
+    const host = process.env.PROXY_HOST;
+    const port = process.env.PROXY_PORT || "7890";
+    const username = process.env.PROXY_USERNAME;
+    const password = process.env.PROXY_PASSWORD;
+    
+    let proxyServer;
+    if (username && password) {
+      proxyServer = `http://${username}:${password}@${host}:${port}`;
+      Logger.info(`使用认证代理: ${host}:${port} (用户: ${username})`);
+    } else {
+      proxyServer = `${host}:${port}`;
+      Logger.info(`使用代理: ${proxyServer}`);
+    }
+    
     launchOptions.args.push(`--proxy-server=${proxyServer}`, "--ignore-certificate-errors");
   }
 
