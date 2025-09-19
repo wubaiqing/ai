@@ -35,8 +35,7 @@ COPY pnpm-lock.yaml ./
 RUN npm install -g pnpm && \
     pnpm install --frozen-lockfile
 
-# 复制项目文件
-COPY . .
+# 项目文件将通过volume挂载，无需复制
 
 # 创建必要的目录
 RUN mkdir -p reports logs /var/log

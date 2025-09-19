@@ -18,15 +18,17 @@ services:
       - .env
 
     volumes:
+      # 项目代码目录挂载（开发模式）
+      - .:/app
+      
+      # 排除node_modules避免冲突
+      - /app/node_modules
+      
       # 报告输出目录同步
       - ./reports:/app/reports
 
       # 日志目录同步
       - ./logs:/app/logs
-
-      # 其他重要文件同步
-      - ./cookies.json:/app/cookies.json
-      - ./.env:/app/.env:ro
 
     # 网络配置
     networks:
