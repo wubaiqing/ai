@@ -5,7 +5,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 设置APK中国镜像源以提高下载速度
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
 # 安装必要的系统依赖
 RUN apk add --no-cache \
