@@ -68,6 +68,109 @@ async function handleShowMoreButtons(page) {
 }
 
 /**
+ * 浏览器连接重试配置
+ */
+const RETRY_CONFIG = {
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 2000,
+  CONNECTION_TIMEOUT: 30000,
+  PAGE_TIMEOUT: 60000
+};
+
+/**
+ * 创建带重试机制的浏览器实例
+ * @param {Object} launchOptions - 浏览器启动选项
+ * @param {number} retryCount - 当前重试次数
+ * @returns {Promise<Object>} 浏览器实例
+ */
+async function createBrowserWithRetry(launchOptions, retryCount = 0) {
+  try {
+    Logger.info(`尝试启动浏览器 (第${retryCount + 1}次)...`);
+    
+    // 添加启动前等待时间，特别是在重试时
+    if (retryCount > 0) {
+      const waitTime = RETRY_CONFIG.RETRY_DELAY * (retryCount + 1);
+      Logger.info(`启动前等待 ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    const browser = await puppeteer.launch(launchOptions);
+    
+    // 监听浏览器断开连接事件
+    browser.on('disconnected', () => {
+      Logger.warn('浏览器连接已断开');
+    });
+    
+    // 添加连接稳定性检查
+    try {
+      const pages = await browser.pages();
+      if (pages.length === 0) {
+        await browser.newPage();
+      }
+      Logger.info('浏览器启动成功，连接稳定');
+      return browser;
+    } catch (connectionError) {
+      Logger.warn(`浏览器连接检查失败: ${connectionError.message}`);
+      try {
+        await browser.close();
+      } catch (closeError) {
+        Logger.warn(`关闭不稳定浏览器失败: ${closeError.message}`);
+      }
+      throw connectionError;
+    }
+    
+  } catch (error) {
+    const isProtocolError = error.message.includes('Protocol error') || 
+                           error.message.includes('Target closed') ||
+                           error.message.includes('Target.setAutoAttach') ||
+                           error.message.includes('Target.setDiscoverTargets');
+    
+    if (isProtocolError) {
+      Logger.warn(`检测到协议错误 (第${retryCount + 1}次): ${error.message}`);
+    } else {
+      Logger.error(`浏览器启动失败 (第${retryCount + 1}次): ${error.message}`);
+    }
+    
+    if (retryCount < RETRY_CONFIG.MAX_RETRIES - 1) {
+      const retryDelay = isProtocolError ? RETRY_CONFIG.RETRY_DELAY * 2 : RETRY_CONFIG.RETRY_DELAY;
+      Logger.info(`等待 ${retryDelay}ms 后重试...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return createBrowserWithRetry(launchOptions, retryCount + 1);
+    }
+    
+    throw new Error(`浏览器启动失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次: ${error.message}`);
+  }
+}
+
+/**
+ * 创建带错误处理的页面实例
+ * @param {Object} browser - 浏览器实例
+ * @returns {Promise<Object>} 页面实例
+ */
+async function createPageWithErrorHandling(browser) {
+  const page = await browser.newPage();
+  
+  // 设置页面错误处理
+  page.on('error', (error) => {
+    Logger.error(`页面错误: ${error.message}`);
+  });
+  
+  page.on('pageerror', (error) => {
+    Logger.error(`页面JavaScript错误: ${error.message}`);
+  });
+  
+  page.on('requestfailed', (request) => {
+    Logger.warn(`请求失败: ${request.url()} - ${request.failure().errorText}`);
+  });
+  
+  // 设置超时
+  page.setDefaultTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
+  page.setDefaultNavigationTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
+  
+  return page;
+}
+
+/**
  * 执行Twitter推文爬取任务
  * @param {string} targetUrl - 目标URL
  * @param {number} [maxTweets=50] - 最大推文数量
@@ -89,7 +192,7 @@ async function scrapeTwitterListWithAuthentication(
     headless: process.env.HEADLESS !== 'false',
     executablePath: CONFIG.CHROME_EXECUTABLE_PATH,
     defaultViewport: null,
-    timeout: CONFIG.PAGE_LOAD_TIMEOUT,
+    timeout: 0,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -106,7 +209,7 @@ async function scrapeTwitterListWithAuthentication(
       "--disable-backgrounding-occluded-windows",
       "--disable-renderer-backgrounding",
       "--disable-web-security",
-      "--disable-features=VizDisplayCompositor",
+      "--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees",
       "--disable-ipc-flooding-protection",
       "--disable-background-networking",
       "--disable-default-apps",
@@ -128,8 +231,58 @@ async function scrapeTwitterListWithAuthentication(
       "--disable-domain-reliability",
       "--single-process",
       "--headless=new",
+      // 增强稳定性的参数
+      "--disable-blink-features=AutomationControlled",
+      "--disable-crash-reporter",
+      "--disable-logging",
+      "--disable-plugins",
+      "--disable-plugins-discovery",
+      "--disable-preconnect",
+      "--disable-threaded-animation",
+      "--disable-threaded-scrolling",
+      "--disable-in-process-stack-traces",
+      "--disable-histogram-customizer",
+      "--disable-gl-extensions",
+      "--disable-composited-antialiasing",
+      "--disable-canvas-aa",
+      "--disable-3d-apis",
+      "--disable-accelerated-mjpeg-decode",
+      "--disable-accelerated-video-decode",
+      "--disable-app-list-dismiss-on-blur",
+      "--disable-accelerated-video-encode",
+      "--num-raster-threads=1",
+      // Docker环境特定的稳定性参数
+      "--disable-dev-tools",
+      "--disable-software-rasterizer",
+      "--disable-background-media-suspend",
+      "--disable-renderer-accessibility",
+      "--disable-speech-api",
+      "--disable-file-system",
+      "--disable-permissions-api",
+      "--disable-presentation-api",
+      "--disable-remote-fonts",
+      "--disable-shared-workers",
+      "--disable-storage-reset",
+      "--disable-tabbed-options",
+      "--disable-threaded-compositing",
+      "--disable-touch-adjustment",
+      "--disable-v8-idle-tasks",
+      "--disable-webgl",
+      "--disable-webgl2",
+      "--max_old_space_size=4096",
+      "--aggressive-cache-discard",
+      "--memory-pressure-off",
+      "--max-gum-fps=15",
+      "--disable-rtc-smoothness-algorithm",
+      "--force-color-profile=srgb",
+      "--disable-features=AudioServiceOutOfProcess,VizDisplayCompositor,VizHitTestSurfaceLayer",
     ],
     ignoreDefaultArgs: ["--enable-automation"],
+    // 增加连接稳定性配置
+    protocolTimeout: 240000,
+    slowMo: 100,
+    // 增加启动等待时间
+    waitForInitialPage: false,
   };
 
   if (process.env.PROXY_HOST) {
@@ -143,12 +296,32 @@ async function scrapeTwitterListWithAuthentication(
   }
 
   Logger.info("启动浏览器...");
-  const browser = await puppeteer.launch(launchOptions);
-  const page = await browser.newPage();
+  
+  // Docker环境启动前额外等待
+  Logger.info('Docker环境启动前等待...');
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  const browser = await createBrowserWithRetry(launchOptions);
+  
+  // 额外的连接稳定性检查
+  Logger.info('执行连接稳定性检查...');
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // 验证浏览器连接状态
+  if (!browser.isConnected()) {
+    throw new Error('浏览器连接不稳定');
+  }
+  
+  const page = await createPageWithErrorHandling(browser);
+  
+  // 页面创建后稳定性检查
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  if (page.isClosed()) {
+    throw new Error('页面创建后立即关闭，连接不稳定');
+  }
 
   try {
-    page.setDefaultTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
-    page.setDefaultNavigationTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
 
     await page.setUserAgent(
       APPLICATION_CONFIG.getUserAgent()
@@ -175,10 +348,45 @@ async function scrapeTwitterListWithAuthentication(
     Logger.info("Cookies设置成功");
 
     Logger.info(`访问页面: ${targetUrl}`);
-    await page.goto(targetUrl, {
-      waitUntil: "networkidle2",
-      timeout: CONFIG.PAGE_LOAD_TIMEOUT,
-    });
+    
+    // 使用重试机制访问页面
+    let navigationSuccess = false;
+    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        // 检查页面是否仍然连接
+        if (page.isClosed()) {
+          throw new Error('页面已关闭，无法导航');
+        }
+        
+        await page.goto(targetUrl, {
+          waitUntil: "networkidle2",
+          timeout: RETRY_CONFIG.PAGE_TIMEOUT,
+        });
+        navigationSuccess = true;
+        break;
+      } catch (error) {
+        const isProtocolError = error.message.includes('Protocol error') || 
+                               error.message.includes('Target closed') ||
+                               error.message.includes('Target.setAutoAttach') ||
+                               error.message.includes('Target.setDiscoverTargets');
+        
+        if (isProtocolError) {
+          Logger.warn(`页面导航协议错误 (第${attempt + 1}次): ${error.message}`);
+        } else {
+          Logger.warn(`页面导航失败 (第${attempt + 1}次): ${error.message}`);
+        }
+        
+        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
+          const waitTime = isProtocolError ? RETRY_CONFIG.RETRY_DELAY * 2 : RETRY_CONFIG.RETRY_DELAY;
+          Logger.info(`等待 ${waitTime}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+    
+    if (!navigationSuccess) {
+      throw new Error(`页面导航失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
+    }
 
     // 处理cookie同意弹窗
     try {
@@ -199,9 +407,34 @@ async function scrapeTwitterListWithAuthentication(
       Logger.info("未发现cookie弹窗或已处理");
     }
 
-    await page.waitForSelector('article [data-testid="tweetText"]', {
-      timeout: CONFIG.PAGE_LOAD_TIMEOUT,
-    });
+    // 使用重试机制等待推文元素加载
+    let elementsLoaded = false;
+    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        await page.waitForSelector('article [data-testid="tweetText"]', {
+          timeout: RETRY_CONFIG.PAGE_TIMEOUT,
+        });
+        elementsLoaded = true;
+        break;
+      } catch (error) {
+        Logger.warn(`等待推文元素失败 (第${attempt + 1}次): ${error.message}`);
+        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
+          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY));
+          // 尝试刷新页面
+          try {
+            await page.reload({ waitUntil: 'networkidle2', timeout: RETRY_CONFIG.PAGE_TIMEOUT });
+          } catch (reloadError) {
+            Logger.warn(`页面刷新失败: ${reloadError.message}`);
+          }
+        }
+      }
+    }
+    
+    if (!elementsLoaded) {
+      throw new Error(`推文元素加载失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
+    }
+    
     Logger.info("页面加载成功");
 
     // 滚动页面并收集推文数据
@@ -303,10 +536,32 @@ async function scrapeTwitterListWithAuthentication(
     return collectedTweets;
   } catch (error) {
     Logger.error("爬取过程中发生错误:", { error: error.message });
+    
+    // 检查是否是Target closed错误
+    if (error.message.includes('Target closed') || error.message.includes('Protocol error')) {
+      Logger.warn('检测到浏览器连接错误，可能需要重启浏览器');
+    }
+    
     throw error;
   } finally {
-    // 确保浏览器被关闭
-    await browser.close();
+    // 确保浏览器被正确关闭
+    try {
+      if (browser && browser.isConnected()) {
+        // 关闭所有页面
+        const pages = await browser.pages();
+        await Promise.all(pages.map(page => {
+          return page.close().catch(err => {
+            Logger.warn(`关闭页面失败: ${err.message}`);
+          });
+        }));
+        
+        // 关闭浏览器
+        await browser.close();
+        Logger.info('浏览器已正确关闭');
+      }
+    } catch (closeError) {
+      Logger.error(`关闭浏览器时出错: ${closeError.message}`);
+    }
   }
 }
 

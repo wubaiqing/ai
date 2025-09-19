@@ -23,6 +23,140 @@ const LOCAL_CONFIG = {
   BROWSER_VIEWPORT: { width: 1280, height: 720 }
 };
 
+// 重试配置
+const RETRY_CONFIG = {
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 2000,
+  PAGE_TIMEOUT: 30000,
+  ELEMENT_TIMEOUT: 15000,
+};
+
+// 页面导航重试机制
+async function navigateWithRetry(page, url, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      Logger.info(`尝试导航到 ${url} (第${attempt + 1}次)...`);
+      
+      // 检查页面是否仍然连接
+      if (page.isClosed()) {
+        throw new Error('页面已关闭，无法导航');
+      }
+      
+      await page.goto(url, { 
+        waitUntil: 'networkidle2', 
+        timeout: 60000 
+      });
+      Logger.info('页面导航成功');
+      return;
+    } catch (error) {
+      const isProtocolError = error.message.includes('Protocol error') || 
+                             error.message.includes('Target closed') ||
+                             error.message.includes('Target.setAutoAttach') ||
+                             error.message.includes('Target.setDiscoverTargets');
+      
+      if (isProtocolError) {
+        Logger.warn(`页面导航协议错误 (第${attempt + 1}次): ${error.message}`);
+      } else {
+        Logger.warn(`页面导航失败 (第${attempt + 1}次): ${error.message}`);
+      }
+      
+      if (attempt < maxRetries - 1) {
+        const waitTime = isProtocolError ? 5000 : 3000;
+        Logger.info(`等待 ${waitTime/1000} 秒后重试导航...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        throw new Error(`页面导航失败，已重试 ${maxRetries} 次: ${error.message}`);
+      }
+    }
+  }
+}
+
+// 创建带重试机制的浏览器实例
+async function createBrowserWithRetry(launchOptions) {
+  for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
+    try {
+      Logger.info(`尝试启动浏览器 (第${attempt + 1}次)...`);
+      
+      // 添加启动前等待时间，特别是在重试时
+      if (attempt > 0) {
+        const waitTime = RETRY_CONFIG.RETRY_DELAY * (attempt + 1);
+        Logger.info(`启动前等待 ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+      
+      const browser = await puppeteer.launch(launchOptions);
+      
+      // 监听浏览器断开连接事件
+      browser.on('disconnected', () => {
+        Logger.warn('浏览器连接已断开');
+      });
+      
+      // 添加连接稳定性检查
+      try {
+        const pages = await browser.pages();
+        if (pages.length === 0) {
+          await browser.newPage();
+        }
+        Logger.info('浏览器启动成功，连接稳定');
+        return browser;
+      } catch (connectionError) {
+        Logger.warn(`浏览器连接检查失败: ${connectionError.message}`);
+        try {
+          await browser.close();
+        } catch (closeError) {
+          Logger.warn(`关闭不稳定浏览器失败: ${closeError.message}`);
+        }
+        throw connectionError;
+      }
+      
+    } catch (error) {
+      const isProtocolError = error.message.includes('Protocol error') || 
+                             error.message.includes('Target closed') ||
+                             error.message.includes('Target.setAutoAttach') ||
+                             error.message.includes('Target.setDiscoverTargets');
+      
+      if (isProtocolError) {
+        Logger.warn(`检测到协议错误 (第${attempt + 1}次): ${error.message}`);
+      } else {
+        Logger.warn(`浏览器启动失败 (第${attempt + 1}次): ${error.message}`);
+      }
+      
+      if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
+        const retryDelay = isProtocolError ? RETRY_CONFIG.RETRY_DELAY * 2 : RETRY_CONFIG.RETRY_DELAY;
+        Logger.info(`等待 ${retryDelay}ms 后重试...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      } else {
+        throw new Error(`浏览器启动失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次: ${error.message}`);
+      }
+    }
+  }
+}
+
+// 创建带错误处理的页面实例
+async function createPageWithErrorHandling(browser) {
+  try {
+    const page = await browser.newPage();
+    
+    // 设置超时
+    page.setDefaultTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
+    page.setDefaultNavigationTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
+    
+    // 监听页面错误
+    page.on('error', (error) => {
+      Logger.error(`页面错误: ${error.message}`);
+    });
+    
+    page.on('pageerror', (error) => {
+      Logger.error(`页面JavaScript错误: ${error.message}`);
+    });
+    
+    return page;
+  } catch (error) {
+    Logger.error(`创建页面失败: ${error.message}`);
+    throw error;
+  }
+}
+
 /**
  * 执行X.com自动登录并保存认证Cookie
  * @param {string} userAccountName - 用户名或邮箱
@@ -38,8 +172,12 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
   try {
     Logger.info('正在启动浏览器实例...');
     
+    // Docker环境启动前额外等待
+    Logger.info('Docker环境启动前等待...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     // 启动浏览器
-    browserInstance = await puppeteer.launch({
+    const launchOptions = {
       headless: process.env.HEADLESS !== 'false',
       executablePath: LOCAL_CONFIG.CHROME_EXECUTABLE_PATH,
       args: [
@@ -56,7 +194,7 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
         "--disable-notifications",
         "--disable-extensions",
         "--disable-web-security",
-        "--disable-features=VizDisplayCompositor",
+        "--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees",
         "--disable-ipc-flooding-protection",
         "--disable-background-networking",
         "--disable-default-apps",
@@ -78,25 +216,134 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
         "--disable-domain-reliability",
         "--single-process",
         "--headless=new",
+        // 增强稳定性的参数
+        "--disable-blink-features=AutomationControlled",
+        "--disable-crash-reporter",
+        "--disable-logging",
+        "--disable-plugins",
+        "--disable-plugins-discovery",
+        "--disable-preconnect",
+        "--disable-threaded-animation",
+        "--disable-threaded-scrolling",
+        "--disable-in-process-stack-traces",
+        "--disable-histogram-customizer",
+        "--disable-gl-extensions",
+        "--disable-composited-antialiasing",
+        "--disable-canvas-aa",
+        "--disable-3d-apis",
+        "--disable-accelerated-mjpeg-decode",
+        "--disable-accelerated-video-decode",
+        "--disable-app-list-dismiss-on-blur",
+        "--disable-accelerated-video-encode",
+        "--num-raster-threads=1",
+        // Docker环境特定的稳定性参数
+        "--disable-dev-tools",
+        "--disable-software-rasterizer",
+        "--disable-background-media-suspend",
+        "--disable-renderer-accessibility",
+        "--disable-speech-api",
+        "--disable-file-system",
+        "--disable-permissions-api",
+        "--disable-presentation-api",
+        "--disable-remote-fonts",
+        "--disable-shared-workers",
+        "--disable-storage-reset",
+        "--disable-tabbed-options",
+        "--disable-threaded-compositing",
+        "--disable-touch-adjustment",
+        "--disable-v8-idle-tasks",
+        "--disable-webgl",
+        "--disable-webgl2",
+        "--max_old_space_size=4096",
+        "--aggressive-cache-discard",
+        "--memory-pressure-off",
+        "--max-gum-fps=15",
+        "--disable-rtc-smoothness-algorithm",
+        "--force-color-profile=srgb",
+        "--disable-features=AudioServiceOutOfProcess,VizDisplayCompositor,VizHitTestSurfaceLayer",
       ],
       ignoreDefaultArgs: ["--enable-automation"],
-    });
+      // 增加连接稳定性配置
+      protocolTimeout: 240000,
+      slowMo: 100,
+      // 增加启动等待时间
+      waitForInitialPage: false,
+      // 禁用超时以提高稳定性
+      timeout: 0,
+    };
 
-    webPage = await browserInstance.newPage();
+    browserInstance = await createBrowserWithRetry(launchOptions);
+    
+    // 额外的连接稳定性检查
+    Logger.info('执行连接稳定性检查...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // 验证浏览器连接状态
+    if (!browserInstance.isConnected()) {
+      throw new Error('浏览器连接不稳定');
+    }
+    
+    webPage = await createPageWithErrorHandling(browserInstance);
+    
+    // 页面创建后稳定性检查
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    if (webPage.isClosed()) {
+      throw new Error('页面创建后立即关闭，连接不稳定');
+    }
+    
     await webPage.setViewport(LOCAL_CONFIG.BROWSER_VIEWPORT);
     await webPage.setUserAgent(APPLICATION_CONFIG.getUserAgent());
 
     Logger.info("正在导航到 Twitter/X.com 登录页面...");
-    await webPage.goto("https://x.com/i/flow/login", {
-      waitUntil: "networkidle2",
-      timeout: LOCAL_CONFIG.PAGE_NAVIGATION_TIMEOUT,
-    });
+    
+    // 使用重试机制导航到登录页面
+    let navigationSuccess = false;
+    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        await webPage.goto("https://x.com/i/flow/login", {
+          waitUntil: "networkidle2",
+          timeout: RETRY_CONFIG.PAGE_TIMEOUT,
+        });
+        navigationSuccess = true;
+        break;
+      } catch (error) {
+        Logger.warn(`页面导航失败 (第${attempt + 1}次): ${error.message}`);
+        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
+          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY));
+        }
+      }
+    }
+    
+    if (!navigationSuccess) {
+      throw new Error(`登录页面导航失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
+    }
 
     // 等待用户名输入框加载完成
     Logger.info("等待用户名输入框加载...");
-    await webPage.waitForSelector('input[name="text"]', {
-      timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
-    });
+    
+    // 使用重试机制等待用户名输入框
+    let usernameInputFound = false;
+    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        await webPage.waitForSelector('input[name="text"]', {
+          timeout: RETRY_CONFIG.ELEMENT_TIMEOUT,
+        });
+        usernameInputFound = true;
+        break;
+      } catch (error) {
+        Logger.warn(`等待用户名输入框失败 (第${attempt + 1}次): ${error.message}`);
+        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
+          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY));
+        }
+      }
+    }
+    
+    if (!usernameInputFound) {
+      throw new Error(`用户名输入框加载失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
+    }
 
     // 填入用户账户名
     Logger.info("正在输入用户账户名...");
@@ -129,9 +376,28 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
 
     // 等待密码输入框加载
     Logger.info("等待密码输入框加载...");
-    await webPage.waitForSelector('input[name="password"]', {
-      timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
-    });
+    
+    // 使用重试机制等待密码输入框
+    let passwordInputFound = false;
+    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        await webPage.waitForSelector('input[name="password"]', {
+          timeout: RETRY_CONFIG.ELEMENT_TIMEOUT,
+        });
+        passwordInputFound = true;
+        break;
+      } catch (error) {
+        Logger.warn(`等待密码输入框失败 (第${attempt + 1}次): ${error.message}`);
+        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
+          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY));
+        }
+      }
+    }
+    
+    if (!passwordInputFound) {
+      throw new Error(`密码输入框加载失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
+    }
 
     // 填入用户密码
     Logger.info("正在输入用户密码...");
@@ -174,11 +440,31 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     
   } catch (error) {
     Logger.error('用户登录认证失败:', { error: error.message });
+    
+    // 检查是否是Target closed错误
+    if (error.message.includes('Target closed') || error.message.includes('Protocol error')) {
+      Logger.warn('检测到浏览器连接错误，可能需要重启浏览器');
+    }
+    
     return false;
   } finally {
-    if (browserInstance) {
-      Logger.info('浏览器实例已关闭');
-      await browserInstance.close();
+    // 确保浏览器被正确关闭
+    try {
+      if (browserInstance && browserInstance.isConnected()) {
+        // 关闭所有页面
+        const pages = await browserInstance.pages();
+        await Promise.all(pages.map(page => {
+          return page.close().catch(err => {
+            Logger.warn(`关闭页面失败: ${err.message}`);
+          });
+        }));
+        
+        // 关闭浏览器
+        await browserInstance.close();
+        Logger.info('浏览器已正确关闭');
+      }
+    } catch (closeError) {
+      Logger.error(`关闭浏览器时出错: ${closeError.message}`);
     }
   }
 }
