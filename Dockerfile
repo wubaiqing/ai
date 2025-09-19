@@ -50,11 +50,7 @@ RUN chmod 0644 /etc/crontabs/root
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "console.log('Health check passed')" || exit 1
 
-# 创建启动脚本
-RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'crond -f -d 8 &' >> /app/start.sh && \
-    echo 'exec "$@"' >> /app/start.sh && \
-    chmod +x /app/start.sh
+# start.sh文件通过volume挂载提供
 
 # 启动命令：启动cron服务并运行应用
 CMD ["sh", "/app/start.sh", "npm", "start"]
