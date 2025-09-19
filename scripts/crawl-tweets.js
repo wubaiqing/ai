@@ -281,7 +281,7 @@ async function scrapeTwitterListWithAuthentication(
 
 async function executeTwitterScrapingTask() {
   const defaultListId = "1950374938378113192";
-  const testScrollCount = 200;
+  const testScrollCount = 500;
 
   try {
     Logger.info("=== 推文爬取服务启动 ===");
