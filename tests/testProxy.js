@@ -37,16 +37,9 @@ function checkProxyConfig() {
   require('dotenv').config({ path: envPath });
   
   const requiredVars = ['PROXY_HOST', 'PROXY_PORT'];
-  const optionalVars = ['PROXY_USERNAME', 'PROXY_PASSWORD'];
   
   Logger.info('必需的环境变量:');
   requiredVars.forEach(varName => {
-    const value = process.env[varName];
-    Logger.info(`  ${varName}: ${value ? '✓' : '✗'} ${value || '未设置'}`);
-  });
-  
-  Logger.info('可选的认证环境变量:');
-  optionalVars.forEach(varName => {
     const value = process.env[varName];
     Logger.info(`  ${varName}: ${value ? '✓' : '✗'} ${value || '未设置'}`);
   });
@@ -209,8 +202,8 @@ async function runAllProxyTests() {
   
   // 3. 代理连接测试
   Logger.info('\n🌐 代理连接测试...');
-  const httpResult = await testProxy('http://www.baidu.com', false);
-  const httpsResult = await testProxy('https://www.google.com', true);
+  const httpResult = await testProxy('http://www.example.com', false);
+  const httpsResult = await testProxy('https://www.amazon.com', true);
   
   // 4. 测试结果
   Logger.info('\n📊 测试结果:');
