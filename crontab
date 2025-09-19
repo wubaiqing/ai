@@ -1,9 +1,21 @@
 # Twitter AI Reporter 定时任务配置
+# 每天凌晨2点清理日志文件
+0 2 * * * /app/scripts/cleanup-logs.sh >> /var/log/cron.log 2>&1
+
 # 每天上午9点执行爬取推文任务
-0 9 * * * cd /app && npm start >> /var/log/cron.log 2>&1
+0 9 * * * /bin/sh -c 'echo "[$(date "+\%Y-\%m-\%d \%H:\%M:\%S")] [CRON-CRAWL-AM] Starting morning tweet crawling task" && cd /app && timeout 3600 npm start && echo "[$(date "+\%Y-\%m-\%d \%H:\%M:\%S")] [CRON-CRAWL-AM] Morning crawling task completed"' >> /var/log/cron.log 2>&1
+
+# 上午9点任务后格式化日志
+5 9 * * * /app/scripts/format-logs.sh >> /var/log/cron.log 2>&1
 
 # 每天下午4点执行爬取推文任务
-0 16 * * * cd /app && npm start >> /var/log/cron.log 2>&1
+0 16 * * * /bin/sh -c 'echo "[$(date "+\%Y-\%m-\%d \%H:\%M:\%S")] [CRON-CRAWL-PM] Starting afternoon tweet crawling task" && cd /app && timeout 3600 npm start && echo "[$(date "+\%Y-\%m-\%d \%H:\%M:\%S")] [CRON-CRAWL-PM] Afternoon crawling task completed"' >> /var/log/cron.log 2>&1
+
+# 下午4点任务后格式化日志
+5 16 * * * /app/scripts/format-logs.sh >> /var/log/cron.log 2>&1
 
 # 每天晚上11点生成报告
-0 23 * * * cd /app && npm run generate-report >> /var/log/cron.log 2>&1
+0 23 * * * /bin/sh -c 'echo "[$(date "+\%Y-\%m-\%d \%H:\%M:\%S")] [CRON-REPORT] Starting report generation task" && cd /app && timeout 1800 npm run generate-report && echo "[$(date "+\%Y-\%m-\%d \%H:\%M:\%S")] [CRON-REPORT] Report generation task completed"' >> /var/log/cron.log 2>&1
+
+# 晚上11点任务后格式化日志
+5 23 * * * /app/scripts/format-logs.sh >> /var/log/cron.log 2>&1

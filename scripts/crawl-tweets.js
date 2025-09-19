@@ -85,6 +85,7 @@ const RETRY_CONFIG = {
  */
 async function createBrowserWithRetry(launchOptions, retryCount = 0) {
   try {
+    console.log(`[${new Date().toISOString()}] [BROWSER-CREATE] 正在创建浏览器实例...`);
     Logger.info(`尝试启动浏览器 (第${retryCount + 1}次)...`);
     
     // 添加启动前等待时间，特别是在重试时
@@ -107,6 +108,7 @@ async function createBrowserWithRetry(launchOptions, retryCount = 0) {
       if (pages.length === 0) {
         await browser.newPage();
       }
+      console.log(`[${new Date().toISOString()}] [BROWSER-SUCCESS] 浏览器实例创建成功`);
       Logger.info('浏览器启动成功，连接稳定');
       return browser;
     } catch (connectionError) {
@@ -194,94 +196,33 @@ async function scrapeTwitterListWithAuthentication(
     defaultViewport: null,
     timeout: 0,
     args: [
+      // Docker环境必需参数
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
       "--disable-gpu",
-      "--window-size=1920,1080",
-      "--start-maximized",
-      "--disable-notifications",
+      
+      // 基础稳定性参数
+      "--no-first-run",
       "--disable-extensions",
+      "--disable-notifications",
+      "--disable-web-security",
+      "--disable-features=VizDisplayCompositor",
+      "--disable-blink-features=AutomationControlled",
+      
+      // 内存和性能优化
+      "--single-process",
+      "--max_old_space_size=4096",
       "--disable-background-timer-throttling",
       "--disable-backgrounding-occluded-windows",
       "--disable-renderer-backgrounding",
-      "--disable-web-security",
-      "--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees",
+      
+      // 协议错误修复
       "--disable-ipc-flooding-protection",
-      "--disable-background-networking",
-      "--disable-default-apps",
-      "--disable-sync",
-      "--disable-translate",
-      "--hide-scrollbars",
-      "--metrics-recording-only",
-      "--mute-audio",
-      "--no-default-browser-check",
-      "--no-pings",
-      "--password-store=basic",
-      "--use-mock-keychain",
-      "--disable-component-extensions-with-background-pages",
-      "--disable-field-trial-config",
-      "--disable-hang-monitor",
-      "--disable-prompt-on-repost",
-      "--disable-client-side-phishing-detection",
-      "--disable-component-update",
-      "--disable-domain-reliability",
-      "--single-process",
-      "--headless=new",
-      // 增强稳定性的参数
-      "--disable-blink-features=AutomationControlled",
-      "--disable-crash-reporter",
-      "--disable-logging",
-      "--disable-plugins",
-      "--disable-plugins-discovery",
-      "--disable-preconnect",
-      "--disable-threaded-animation",
-      "--disable-threaded-scrolling",
-      "--disable-in-process-stack-traces",
-      "--disable-histogram-customizer",
-      "--disable-gl-extensions",
-      "--disable-composited-antialiasing",
-      "--disable-canvas-aa",
-      "--disable-3d-apis",
-      "--disable-accelerated-mjpeg-decode",
-      "--disable-accelerated-video-decode",
-      "--disable-app-list-dismiss-on-blur",
-      "--disable-accelerated-video-encode",
-      "--num-raster-threads=1",
-      // Docker环境特定的稳定性参数
-      "--disable-dev-tools",
-      "--disable-software-rasterizer",
-      "--disable-background-media-suspend",
-      "--disable-renderer-accessibility",
-      "--disable-speech-api",
-      "--disable-file-system",
-      "--disable-permissions-api",
-      "--disable-presentation-api",
-      "--disable-remote-fonts",
-      "--disable-shared-workers",
-      "--disable-storage-reset",
-      "--disable-tabbed-options",
-      "--disable-threaded-compositing",
-      "--disable-touch-adjustment",
-      "--disable-v8-idle-tasks",
-      "--disable-webgl",
-      "--disable-webgl2",
-      "--max_old_space_size=4096",
-      "--aggressive-cache-discard",
-      "--memory-pressure-off",
-      "--max-gum-fps=15",
-      "--disable-rtc-smoothness-algorithm",
-      "--force-color-profile=srgb",
-      "--disable-features=AudioServiceOutOfProcess,VizDisplayCompositor,VizHitTestSurfaceLayer",
+      "--headless=new"
     ],
     ignoreDefaultArgs: ["--enable-automation"],
-    // 增加连接稳定性配置
     protocolTimeout: 240000,
-    slowMo: 100,
-    // 增加启动等待时间
     waitForInitialPage: false,
   };
 
@@ -312,7 +253,9 @@ async function scrapeTwitterListWithAuthentication(
     throw new Error('浏览器连接不稳定');
   }
   
+  console.log(`[${new Date().toISOString()}] [PAGE-CREATE] 正在创建页面实例...`);
   const page = await createPageWithErrorHandling(browser);
+  console.log(`[${new Date().toISOString()}] [PAGE-SUCCESS] 页面实例创建成功`);
   
   // 页面创建后稳定性检查
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -344,7 +287,9 @@ async function scrapeTwitterListWithAuthentication(
       sameSite: "None",
     }));
 
+    console.log(`[${new Date().toISOString()}] [COOKIE-SET] 正在设置Cookie...`);
     await page.setCookie(...formattedCookies);
+    console.log(`[${new Date().toISOString()}] [COOKIE-SUCCESS] Cookie设置完成`);
     Logger.info("Cookies设置成功");
 
     Logger.info(`访问页面: ${targetUrl}`);
@@ -570,12 +515,16 @@ async function executeTwitterScrapingTask() {
   const testScrollCount = 500;
 
   try {
+    console.log(`[${new Date().toISOString()}] [CRAWL-START] 开始执行Twitter爬取任务...`);
     Logger.info("=== 推文爬取服务启动 ===");
     const scrapedTweets = await scrapeTwitterListWithAuthentication(defaultListId, testScrollCount);
+    console.log(`[${new Date().toISOString()}] [CRAWL-COMPLETE] 推文爬取任务完成`);
     Logger.info("=== 爬取任务完成 ===");
+    console.log(`[${new Date().toISOString()}] [CRAWL-SUCCESS] 成功爬取 ${scrapedTweets.length} 条推文`);
     Logger.info(`总计获取: ${scrapedTweets.length} 条推文`);
   } catch (error) {
     Logger.error("=== 爬取任务失败 ===");
+    console.error(`[${new Date().toISOString()}] [CRAWL-ERROR] 推文爬取任务失败: ${error.message}`);
     Logger.error("错误:", { error: error.message });
     process.exit(1);
   }

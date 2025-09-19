@@ -180,96 +180,36 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
     const launchOptions = {
       headless: process.env.HEADLESS !== 'false',
       executablePath: LOCAL_CONFIG.CHROME_EXECUTABLE_PATH,
+      timeout: 0,
       args: [
+        // Docker环境必需参数
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
         "--disable-gpu",
+        
+        // 基础稳定性参数
+        "--no-first-run",
+        "--disable-extensions",
+        "--disable-notifications",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--disable-blink-features=AutomationControlled",
+        
+        // 内存和性能优化
+        "--single-process",
+        "--max_old_space_size=4096",
         "--disable-background-timer-throttling",
         "--disable-backgrounding-occluded-windows",
         "--disable-renderer-backgrounding",
-        "--disable-notifications",
-        "--disable-extensions",
-        "--disable-web-security",
-        "--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees",
+        
+        // 协议错误修复
         "--disable-ipc-flooding-protection",
-        "--disable-background-networking",
-        "--disable-default-apps",
-        "--disable-sync",
-        "--disable-translate",
-        "--hide-scrollbars",
-        "--metrics-recording-only",
-        "--mute-audio",
-        "--no-default-browser-check",
-        "--no-pings",
-        "--password-store=basic",
-        "--use-mock-keychain",
-        "--disable-component-extensions-with-background-pages",
-        "--disable-field-trial-config",
-        "--disable-hang-monitor",
-        "--disable-prompt-on-repost",
-        "--disable-client-side-phishing-detection",
-        "--disable-component-update",
-        "--disable-domain-reliability",
-        "--single-process",
-        "--headless=new",
-        // 增强稳定性的参数
-        "--disable-blink-features=AutomationControlled",
-        "--disable-crash-reporter",
-        "--disable-logging",
-        "--disable-plugins",
-        "--disable-plugins-discovery",
-        "--disable-preconnect",
-        "--disable-threaded-animation",
-        "--disable-threaded-scrolling",
-        "--disable-in-process-stack-traces",
-        "--disable-histogram-customizer",
-        "--disable-gl-extensions",
-        "--disable-composited-antialiasing",
-        "--disable-canvas-aa",
-        "--disable-3d-apis",
-        "--disable-accelerated-mjpeg-decode",
-        "--disable-accelerated-video-decode",
-        "--disable-app-list-dismiss-on-blur",
-        "--disable-accelerated-video-encode",
-        "--num-raster-threads=1",
-        // Docker环境特定的稳定性参数
-        "--disable-dev-tools",
-        "--disable-software-rasterizer",
-        "--disable-background-media-suspend",
-        "--disable-renderer-accessibility",
-        "--disable-speech-api",
-        "--disable-file-system",
-        "--disable-permissions-api",
-        "--disable-presentation-api",
-        "--disable-remote-fonts",
-        "--disable-shared-workers",
-        "--disable-storage-reset",
-        "--disable-tabbed-options",
-        "--disable-threaded-compositing",
-        "--disable-touch-adjustment",
-        "--disable-v8-idle-tasks",
-        "--disable-webgl",
-        "--disable-webgl2",
-        "--max_old_space_size=4096",
-        "--aggressive-cache-discard",
-        "--memory-pressure-off",
-        "--max-gum-fps=15",
-        "--disable-rtc-smoothness-algorithm",
-        "--force-color-profile=srgb",
-        "--disable-features=AudioServiceOutOfProcess,VizDisplayCompositor,VizHitTestSurfaceLayer",
+        "--headless=new"
       ],
       ignoreDefaultArgs: ["--enable-automation"],
-      // 增加连接稳定性配置
       protocolTimeout: 240000,
-      slowMo: 100,
-      // 增加启动等待时间
       waitForInitialPage: false,
-      // 禁用超时以提高稳定性
-      timeout: 0,
     };
 
     browserInstance = await createBrowserWithRetry(launchOptions);
@@ -521,10 +461,12 @@ function checkAuthenticationCookiesExist() {
  * @returns {Promise<void>}
  */
 async function executeAuthenticationProcess() {
+  console.log(`[${new Date().toISOString()}] [COOKIE-UPDATE-START] Twitter/X.com 自动登录认证脚本启动`);
   Logger.info('[启动] Twitter/X.com 自动登录认证脚本');
   
   // 检查是否已存在有效的认证cookies
   if (checkAuthenticationCookiesExist()) {
+    console.log(`[${new Date().toISOString()}] [COOKIE-UPDATE-SKIP] 已存在有效cookies文件`);
     Logger.info('[提示] 已存在有效cookies文件，如需重新登录请删除 cookies.json 文件');
     process.exit(0);
   }
@@ -533,9 +475,11 @@ async function executeAuthenticationProcess() {
   const authenticationSuccess = await authenticateFromEnvironmentVariables();
   
   if (authenticationSuccess) {
+    console.log(`[${new Date().toISOString()}] [COOKIE-UPDATE-SUCCESS] 用户登录认证成功，cookies数据已保存`);
     Logger.info('[完成] 用户登录认证成功，cookies数据已保存');
     process.exit(0);
   } else {
+    console.error(`[${new Date().toISOString()}] [COOKIE-UPDATE-ERROR] 用户登录认证失败`);
     Logger.error('[失败] 用户登录认证失败');
     process.exit(1);
   }

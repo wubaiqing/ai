@@ -18,6 +18,7 @@ async function executeAIReportGeneration(options = {}) {
   const taskStartTime = Date.now();
   
   try {
+    console.log(`[${new Date().toISOString()}] [REPORT-START] 开始执行AI简报生成任务...`);
     Logger.info('开始执行AI简报生成任务...');
     
     // 验证环境变量
@@ -29,6 +30,7 @@ async function executeAIReportGeneration(options = {}) {
     const totalExecutionTime = Date.now() - taskStartTime;
     
     if (generationResult.success) {
+      console.log(`[${new Date().toISOString()}] [REPORT-SUCCESS] AI简报生成成功，处理推文数量: ${generationResult.metadata.tweetsProcessed}`);
       Logger.info('\n✅ AI简报生成成功！');
       Logger.info(`📄 报告路径: ${generationResult.filePath}`);
       Logger.info(`📊 处理推文数量: ${generationResult.metadata.tweetsProcessed}`);
@@ -40,6 +42,7 @@ async function executeAIReportGeneration(options = {}) {
         Logger.info('=== 简报内容结束 ===\n');
       }
     } else {
+      console.error(`[${new Date().toISOString()}] [REPORT-ERROR] AI简报生成失败: ${generationResult.error}`);
       Logger.error('\n❌ AI简报生成失败:', { error: generationResult.error });
       process.exit(1);
     }
@@ -47,6 +50,7 @@ async function executeAIReportGeneration(options = {}) {
   } catch (error) {
     const totalExecutionTime = Date.now() - taskStartTime;
     
+    console.error(`[${new Date().toISOString()}] [REPORT-ERROR] AI简报生成任务失败: ${error.message}`);
     Logger.error('AI简报生成任务失败', {
       error: error.message,
       executionTimeMs: totalExecutionTime
