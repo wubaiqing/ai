@@ -57,4 +57,4 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # 启动命令：启动cron服务并运行应用
-CMD ["/app/start.sh", "npm", "start"]
+CMD ["sh", "/app/start.sh", "npm", "start"]
