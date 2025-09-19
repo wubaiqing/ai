@@ -50,7 +50,13 @@ async function authenticateAndSaveCookies(userAccountName, userPassword, userEma
         "--no-first-run",
         "--no-zygote",
         "--disable-gpu",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-notifications",
+        "--disable-extensions",
       ],
+      ignoreDefaultArgs: ["--enable-automation"],
     });
 
     webPage = await browserInstance.newPage();
