@@ -107,12 +107,12 @@ async function scrapeTwitterListWithAuthentication(
     const username = process.env.PROXY_USERNAME;
     const password = process.env.PROXY_PASSWORD;
     
-    // 只设置代理服务器地址，不包含认证信息
-    const proxyServer = `http://${host}:${port}`;
-    
+    let proxyServer;
     if (username && password) {
+      proxyServer = `http://${username}:${password}@${host}:${port}`;
       Logger.info(`使用认证代理: ${host}:${port} (用户: ${username})`);
     } else {
+      proxyServer = `${host}:${port}`;
       Logger.info(`使用代理: ${proxyServer}`);
     }
     
@@ -124,15 +124,6 @@ async function scrapeTwitterListWithAuthentication(
   const page = await browser.newPage();
 
   try {
-    // 如果配置了代理认证信息，使用 page.authenticate() 设置
-    if (process.env.PROXY_HOST && process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
-      await page.authenticate({
-        username: process.env.PROXY_USERNAME,
-        password: process.env.PROXY_PASSWORD
-      });
-      Logger.info("代理认证设置成功");
-    }
-
     page.setDefaultTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
     page.setDefaultNavigationTimeout(CONFIG.PAGE_LOAD_TIMEOUT);
 
