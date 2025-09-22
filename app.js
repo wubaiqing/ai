@@ -239,18 +239,25 @@ function main() {
     
     // 启动时立即执行一次抓取任务
     log('INFO', 'Executing initial crawl task on startup...');
-    executeCommand('npm', ['start'])
-        .then(() => {
-            log('INFO', 'Initial crawl task completed successfully');
-        })
-        .catch((error) => {
+    
+    // 直接调用爬取函数，不使用外部脚本
+    const { scrapeTwitterListWithAuthentication } = require('./scripts/crawl-tweets');
+    const defaultListId = "1950374938378113192";
+    const testScrollCount = 500;
+    
+    (async () => {
+        try {
+            log('INFO', 'Starting Twitter scraping task...');
+            const scrapedTweets = await scrapeTwitterListWithAuthentication(defaultListId, testScrollCount);
+            log('INFO', `Initial crawl task completed successfully - scraped ${scrapedTweets.length} tweets`);
+        } catch (error) {
             log('ERROR', `Initial crawl task failed: ${error.message}`);
-        })
-        .finally(() => {
+        } finally {
             // 启动调度器
             log('INFO', 'Starting task scheduler for periodic execution...');
             scheduler.start();
-        });
+        }
+    })();
     
     // 优雅关闭处理
     process.on('SIGINT', () => {
