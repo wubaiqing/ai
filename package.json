@@ -2,12 +2,14 @@
   "name": "twitter-ai-reporter",
   "version": "1.0.0",
   "description": "Twitter AI智能分析和报告生成系统",
-  "main": "scripts/crawl-tweets.js",
+  "main": "app.js",
   "scripts": {
     "start": "node scripts/crawl-tweets.js",
     "update-cookies": "node scripts/update-cookies.js",
     "generate-report": "node scripts/generate-report.js",
-    "test-proxy": "node tests/testProxy.js"
+    "test-proxy": "node tests/testProxy.js",
+    "serve": "node app.js",
+    "dev": "node app.js"
   },
   "keywords": [
     "twitter",

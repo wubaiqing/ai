@@ -16,9 +16,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    git \
-    dcron \
-    busybox-suid
+    git
 
 # 设置Puppeteer中国镜像源以提高下载速度
 ENV PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary
@@ -38,19 +36,11 @@ RUN npm install -g pnpm && \
 # 项目文件将通过volume挂载，无需复制
 
 # 创建必要的目录
-RUN mkdir -p reports logs /var/log
-
-# 复制cron配置文件
-COPY crontab /etc/crontabs/root
-
-# 设置cron文件权限
-RUN chmod 0644 /etc/crontabs/root
+RUN mkdir -p reports logs
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "console.log('Health check passed')" || exit 1
 
-# start.sh文件通过volume挂载提供
-
-# 启动命令：启动cron服务并运行应用
-CMD ["sh", "/app/start.sh", "npm", "start"]
+# 启动命令：直接运行长期服务
+CMD ["npm", "run", "serve"]

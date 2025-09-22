@@ -1,18 +1,13 @@
 #!/bin/sh
 
-# 创建日志目录
-mkdir -p /var/log
+# Twitter AI Reporter - 简化启动脚本
+# 直接启动Node.js长期服务，不再使用cron
 
-# 启动日志监控服务（后台运行）
-/app/scripts/monitor-logs.sh &
+echo "[$(date "+%Y-%m-%d %H:%M:%S")] [START] Starting Twitter AI Reporter Service..."
 
-# 启动 cron 服务
-crond -f -d 8 &
+# 创建必要的目录
+mkdir -p logs reports
 
-# 等待服务启动
-sleep 2
-
-echo "[$(date "+%Y-%m-%d %H:%M:%S")] [CONTAINER-START] Container services started successfully"
-
-# 执行传入的命令
-exec "$@"
+# 启动Node.js服务
+echo "[$(date "+%Y-%m-%d %H:%M:%S")] [START] Launching Node.js service..."
+exec node app.js

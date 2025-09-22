@@ -119,6 +119,19 @@ class ApplicationConfiguration {
   }
 
   /**
+   * 获取Chrome浏览器可执行文件路径
+   * 适配不同环境的Chrome路径配置
+   */
+  getChromeExecutablePath() {
+    // 群辉NAS Docker环境优化
+    const defaultPath = process.platform === 'linux' 
+      ? '/usr/bin/chromium-browser' 
+      : process.env.CHROME_EXECUTABLE_PATH;
+    
+    return process.env.CHROME_EXECUTABLE_PATH || defaultPath;
+  }
+
+  /**
    * 获取完整应用配置
    */
   getAllApplicationConfiguration() {

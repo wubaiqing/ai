@@ -19,29 +19,19 @@
 # 每天上午9点执行爬取推文任务
 0 9 * * * /bin/sh -c 'echo "[$(date "+%Y-%m-%d %H:%M:%S")] [CRON-CRAWL-AM] Starting morning tweet crawling task" && cd /app && timeout 3600 npm start && echo "[$(date "+%Y-%m-%d %H:%M:%S")] [CRON-CRAWL-AM] Morning crawling task completed"' >> /var/log/cron.log 2>&1
 
-# 任务后格式化日志
-5 9 * * * /app/scripts/format-logs.sh >> /var/log/cron.log 2>&1
+# 已移除：5 9 * * * /app/scripts/format-logs.sh >> /var/log/cron.log 2>&1
 ```
 
 ### 3. 日志清理和格式化脚本
 
-#### cleanup-logs.sh
-- 每日凌晨2点自动清理过期日志
-- 清理超过7天的cron日志
-- 清理超过30天的应用日志
-- 限制cron.log文件大小（超过10MB则截断）
+#### 日志管理说明
 
-#### format-logs.sh
-- 清理日志中的二进制数据和不可读字符
-- 保留可打印的ASCII字符、换行符和制表符
-- 移除多余的空行
-- 在每个主要任务执行后自动运行
+**注意：** 原有的shell脚本（cleanup-logs.sh、format-logs.sh、monitor-logs.sh）已被移除。
+日志管理现在通过Node.js服务内置的日志轮转机制处理，无需额外的shell脚本。
 
-#### monitor-logs.sh
-- 实时监控日志文件状态
-- 自动检测和清理二进制数据污染
-- 日志文件大小管理（超过50MB自动轮转）
-- 每30秒检查一次日志质量
+- 日志自动轮转：当日志文件超过指定大小时自动创建新文件
+- 自动清理：保留最近的日志文件，自动删除过期文件
+- 内存优化：适配群辉NAS等资源受限环境
 
 ### 4. 容器启动优化
 更新了`start.sh`脚本：
@@ -83,11 +73,11 @@ docker exec -it <container_name> tail -f /app/logs/app.log
 
 ### 手动清理日志
 ```bash
-# 执行日志清理
-docker exec -it <container_name> /app/scripts/cleanup-logs.sh
+# 查看日志状态（日志管理已内置到Node.js服务中）
+docker exec -it <container_name> ls -la /app/logs/
 
-# 执行日志格式化
-docker exec -it <container_name> /app/scripts/format-logs.sh
+# 查看当前日志
+docker exec -it <container_name> tail -f /app/logs/app.log
 ```
 
 ### 检查日志质量

@@ -1,6 +1,6 @@
 # Twitter AI Reporter 🐦📊
 
-一个专业的 Twitter/X.com 智能分析和报告生成系统，集成推文采集、AI 分析和自动化报告功能。
+一个专业的 Twitter/X.com 智能分析和报告生成系统，采用**纯 Node.js 长期运行服务架构**，无需复杂的 shell 脚本和 cron 配置，支持一键 Docker 部署。集成推文采集、AI 分析和自动化报告功能。
 
 ## 📋 目录
 
@@ -19,6 +19,14 @@
 
 ## 功能特性 ✨
 
+### 🚀 简化部署架构
+- ⚡ **纯 Node.js 服务**: 移除复杂的 shell 脚本和 cron 依赖
+- 🎯 **内置任务调度**: 使用 Node.js 内置定时器，无需系统 cron 配置
+- 🐳 **一键 Docker 部署**: 轻量化容器镜像，支持 Docker Compose 快速启动
+- 🔄 **优雅关闭**: 支持 SIGINT 和 SIGTERM 信号处理
+- 📝 **统一日志管理**: 集成日志格式，自动清理历史日志
+
+### 🔧 核心功能
 - 🔍 **智能推文爬取**: 自动爬取指定列表的推文数据，支持批量处理
 - 🤖 **AI 智能分析**: 使用硅基流动API分析推文内容，生成深度洞察
 - 📊 **自动报告生成**: 生成结构化的科技资讯简报，支持多种格式
@@ -26,8 +34,6 @@
 - 💾 **数据存储**: 集成 Supabase 数据库存储，支持数据持久化
 - 🔄 **数据去重**: 智能去重机制避免重复数据，提升数据质量
 - 🌐 **代理支持**: 支持HTTP代理配置，适应不同网络环境
-- ⏰ **定时执行**: 支持 Cron 定时任务自动化运行
-- 🐳 **容器化部署**: 完整的 Docker 支持，适配群辉 NAS 等环境
 - 📈 **性能优化**: 支持并发处理和资源限制配置
 
 ## 环境要求 🛠️
@@ -42,7 +48,29 @@
 
 ## 快速开始 🚀
 
-### 1. 安装依赖
+### 🐳 Docker 部署（推荐）
+
+**最简单的部署方式，一键启动所有服务：**
+
+```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd twitter-ai-reporter
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入必要的配置
+
+# 3. 一键启动服务
+docker-compose up -d
+
+# 4. 查看服务状态
+docker-compose logs -f twitter-ai
+```
+
+### 💻 本地开发部署
+
+#### 1. 安装依赖
 
 ```bash
 # 使用 npm
@@ -55,19 +83,24 @@ pnpm install
 yarn install
 ```
 
-### 2. 环境配置
-
-复制环境变量模板并配置：
+#### 2. 环境配置
 
 ```bash
 cp .env.example .env
+# 编辑 .env 文件，配置必要的环境变量（详见下方配置说明）
 ```
 
-编辑 `.env` 文件，配置必要的环境变量（详见下方配置说明）。
+#### 3. 启动长期运行服务
 
-### 3. 启动服务
+```bash
+# 启动长期服务（包含自动任务调度）
+npm run serve
 
-#### 本地运行
+# 或者开发模式
+npm run dev
+```
+
+#### 4. 手动执行任务
 
 ```bash
 # 推文爬取服务
@@ -80,7 +113,7 @@ node scripts/generate-report.js
 node scripts/update-cookies.js
 ```
 
-#### 使用 npm 脚本
+#### 5. 使用 npm 脚本
 
 ```bash
 # 生成AI简报
@@ -227,84 +260,102 @@ node -e "require('./src/lib/supabase').testConnection()"
 npm test
 ```
 
-## 定时任务配置 ⏰
+## 自动任务调度 ⏰
 
-### Docker 环境中的定时任务
+### 🎯 内置任务调度器
 
-项目已配置完整的定时任务支持，可在 Docker 容器中自动执行。
+项目采用 **Node.js 内置定时器**实现任务调度，无需配置系统 cron 或 shell 脚本。服务启动后自动按计划执行所有任务。
 
-**执行时间表：**
-- **上午 9:00**: 执行推文爬取任务
-- **下午 4:00**: 执行推文爬取任务
-- **晚上 11:00**: 生成AI分析报告
+**默认执行时间表：**
 
-**Cron 表达式说明：**
-```bash
-# 分钟 小时 日 月 星期 命令
-0 9 * * *    # 每天上午9点
-0 16 * * *   # 每天下午4点
-0 23 * * *   # 每天晚上11点
+| 任务 | 时间 | 描述 |
+|------|------|------|
+| 日志清理 | 每天 02:00 | 清理7天前的日志文件 |
+| 上午爬取 | 每天 09:00 | 执行推文爬取任务 |
+| 下午爬取 | 每天 16:00 | 执行推文爬取任务 |
+| 生成报告 | 每天 23:00 | 生成AI分析报告 |
+
+### 🔧 自定义任务时间
+
+如需修改任务执行时间，编辑 `app.js` 文件中的 cron 表达式：
+
+```javascript
+// 例如：改为每天上午8点执行
+scheduler.addTask('crawl-tweets-morning', '0 8 * * *', 'npm', ['start']);
+
+// Cron 表达式格式：秒 分 时 日 月 星期
+// 0 9 * * *  = 每天上午9点
+// 0 */6 * * * = 每6小时执行一次
+// 0 0 * * 1  = 每周一午夜执行
 ```
 
-### Linux/macOS 系统使用 Cron
+### 📊 服务监控和管理
 
-1. **编辑 Cron 任务**：
+#### 查看服务状态
+
 ```bash
-crontab -e
+# Docker 环境
+docker-compose ps
+docker-compose logs -f twitter-ai
+docker-compose logs --tail=100 twitter-ai
+
+# 本地环境
+ps aux | grep "node.*app.js"
+tail -f logs/app.log
 ```
 
-2. **添加定时任务示例**：
+#### 重启服务
+
 ```bash
-# 每天凌晨 2 点执行数据爬取
-0 2 * * * cd /path/to/twitter-ai-reporter && node scripts/crawl-tweets.js >> /var/log/twitter-reporter.log 2>&1
+# Docker 环境
+docker-compose restart twitter-ai
+docker-compose up -d --build  # 重新构建并启动
 
-# 每 6 小时执行一次
-0 */6 * * * cd /path/to/twitter-ai-reporter && node scripts/crawl-tweets.js
-
-# 每周一上午 9 点生成周报
-0 9 * * 1 cd /path/to/twitter-ai-reporter && node scripts/generate-report.js
+# 本地环境
+# 使用 Ctrl+C 停止服务，然后重新启动
+npm run serve
 ```
 
-3. **查看和管理 Cron 任务**：
-```bash
-# 查看当前任务
-crontab -l
-
-# 删除所有任务
-crontab -r
-```
-
-### Windows 系统使用任务计划程序
-
-1. 打开「任务计划程序」
-2. 创建基本任务
-3. 设置触发器（时间安排）
-4. 设置操作：
-   - 程序：`node`
-   - 参数：`scripts/crawl-tweets.js`
-   - 起始位置：项目根目录路径
-
-### 定时任务监控
+#### 手动执行任务
 
 ```bash
-# 查看定时任务日志
-docker exec twitter-ai-reporter tail -f /var/log/cron.log
-
-# 查看应用日志
-docker logs twitter-ai-reporter
-
-# 手动执行任务
+# Docker 环境
 docker exec twitter-ai-reporter npm start
 docker exec twitter-ai-reporter npm run generate-report
+
+# 本地环境
+node scripts/crawl-tweets.js
+node scripts/generate-report.js
 ```
+
+### 🚀 架构优势
+
+1. **简化部署**: 不需要配置 cron 和 shell 脚本
+2. **统一日志**: 所有任务日志集成在应用日志中
+3. **优雅关闭**: 支持 SIGINT 和 SIGTERM 信号处理
+4. **跨平台**: 不依赖特定的 shell 环境
+5. **易于调试**: 所有逻辑都在 Node.js 中
+6. **资源效率**: 更轻量的容器镜像
 
 ## Docker 部署 🐳
 
-### 基础 Docker 部署
+### 🚀 简化的 Docker 架构
+
+项目已完全简化 Docker 部署流程：
+- ✅ **移除 cron 依赖**: 不再需要复杂的 cron 配置
+- ✅ **移除 shell 脚本**: 纯 Node.js 服务架构
+- ✅ **轻量化镜像**: 更小的容器体积和更快的启动速度
+- ✅ **统一日志**: 集成的日志管理和自动清理
+
+### 📦 快速部署
 
 #### 1. 准备环境
 
 ```bash
+# 克隆项目
+git clone <repository-url>
+cd twitter-ai-reporter
+
 # 创建必要的目录
 mkdir -p logs reports
 
@@ -316,34 +367,36 @@ cp .env.example .env
 # 编辑 .env 文件配置所有必需变量
 ```
 
-#### 2. 构建和启动
+#### 2. 一键启动
 
 ```bash
-# 构建镜像
-docker compose build
+# 构建并启动服务
+docker-compose up -d
 
-# 启动服务
-docker compose up -d
+# 查看服务状态
+docker-compose ps
 
-# 查看日志
-docker compose logs -f
+# 查看实时日志
+docker-compose logs -f twitter-ai
 ```
 
 #### 3. 服务管理
 
 ```bash
 # 重启服务
-docker compose restart
+docker-compose restart twitter-ai
+
+# 重新构建并启动
+docker-compose up -d --build
 
 # 停止服务
-docker compose down
+docker-compose stop
 
-# 更新服务
-docker compose pull
-docker compose up -d
+# 停止并删除容器
+docker-compose down
 
 # 进入容器调试
-docker compose exec twitter-ai-reporter sh
+docker-compose exec twitter-ai sh
 ```
 
 ### 群辉 NAS 部署指南
@@ -443,7 +496,40 @@ chromium-browser --version
 
 ### 🚨 常见问题及解决方案
 
-#### 1. 环境配置问题
+#### 1. 服务启动问题
+
+**Q: 服务无法启动？**
+
+解决步骤：
+```bash
+# 1. 检查环境变量配置
+npm run check-config
+
+# 2. 查看容器日志
+docker-compose logs twitter-ai
+
+# 3. 验证配置文件
+cat .env | grep -v "^#" | grep -v "^$"
+
+# 4. 检查资源使用
+docker stats twitter-ai
+```
+
+**Q: 任务没有执行？**
+
+解决步骤：
+```bash
+# 1. 检查系统时间是否正确
+date
+
+# 2. 查看应用日志中的任务调度信息
+tail -f logs/app.log | grep "scheduler"
+
+# 3. 手动执行任务测试
+node scripts/crawl-tweets.js
+```
+
+#### 2. 环境配置问题
 
 **Q: 如何获取 Supabase 配置？**
 
@@ -490,6 +576,71 @@ npm run test-ai
 # 3. 检查网络连接
 ping api.siliconflow.cn
 ```
+
+#### 4. 性能和资源问题
+
+**Q: 内存不足或处理缓慢？**
+
+解决方案：
+```bash
+# 1. 调整 docker-compose.yml 中的内存限制
+# 在 docker-compose.yml 中添加：
+# deploy:
+#   resources:
+#     limits:
+#       memory: 2G
+#     reservations:
+#       memory: 1G
+
+# 2. 监控容器资源使用情况
+docker stats twitter-ai
+
+# 3. 优化并发配置
+echo "MAX_CONCURRENT=1" >> .env
+echo "REQUEST_DELAY=2000" >> .env
+
+# 4. 调整 Node.js 内存限制
+node --max-old-space-size=4096 scripts/crawl-tweets.js
+```
+
+### 🔧 调试模式
+
+```bash
+# 本地调试运行
+node app.js
+
+# 查看详细日志
+DEBUG=* node app.js
+
+# 启用详细日志级别
+LOG_LEVEL=debug npm run serve
+```
+
+### 🔄 迁移指南
+
+如果你之前使用的是 cron 版本，迁移步骤：
+
+1. **停止旧服务**:
+   ```bash
+   docker-compose down
+   ```
+
+2. **更新代码到最新版本**:
+   ```bash
+   git pull origin main
+   ```
+
+3. **重新构建并启动**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+4. **验证服务正常运行**:
+   ```bash
+   docker-compose logs -f twitter-ai
+   ```
+
+**注意**: 旧的 shell 脚本和 cron 配置文件仍然保留，但不再使用。
 
 **Q: 数据库连接失败？**
 

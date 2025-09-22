@@ -56,6 +56,13 @@ docker-compose*
 !README.md
 docs
 
+# 旧的配置文件（已不使用）
+crontab
+# 已删除的日志清理脚本
+# scripts/cleanup-logs.sh
+# scripts/format-logs.sh
+# scripts/monitor-logs.sh
+
 # 备份文件
 *.bak
 *.backup

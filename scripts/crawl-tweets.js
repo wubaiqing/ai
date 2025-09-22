@@ -190,9 +190,10 @@ async function scrapeTwitterListWithAuthentication(
   const targetUrl = `https://x.com/i/lists/${listId}`;
   Logger.info(`开始爬取推特列表: ${listId}`);
 
+  // 群辉NAS Docker环境优化配置
   const launchOptions = {
     headless: process.env.HEADLESS !== 'false',
-    executablePath: CONFIG.CHROME_EXECUTABLE_PATH,
+    executablePath: APPLICATION_CONFIG.getChromeExecutablePath(),
     defaultViewport: null,
     timeout: 0,
     args: [
@@ -202,27 +203,27 @@ async function scrapeTwitterListWithAuthentication(
       "--disable-dev-shm-usage",
       "--disable-gpu",
       
-      // 基础稳定性参数
+      // 群辉NAS资源优化
+      "--memory-pressure-off",
+      "--max_old_space_size=512",
+      "--single-process",
+      "--disable-background-timer-throttling",
+      "--disable-renderer-backgrounding",
+      
+      // 精简功能配置
       "--no-first-run",
       "--disable-extensions",
       "--disable-notifications",
       "--disable-web-security",
-      "--disable-features=VizDisplayCompositor",
+      "--disable-features=VizDisplayCompositor,TranslateUI",
       "--disable-blink-features=AutomationControlled",
-      
-      // 内存和性能优化
-      "--single-process",
-      "--max_old_space_size=4096",
-      "--disable-background-timer-throttling",
-      "--disable-backgrounding-occluded-windows",
-      "--disable-renderer-backgrounding",
-      
-      // 协议错误修复
       "--disable-ipc-flooding-protection",
+      "--disable-default-apps",
+      "--disable-sync",
       "--headless=new"
     ],
     ignoreDefaultArgs: ["--enable-automation"],
-    protocolTimeout: 240000,
+    protocolTimeout: 180000, // 降低超时时间
     waitForInitialPage: false,
   };
 
