@@ -199,30 +199,9 @@ async function scrapeTwitterListWithAuthentication(
     args: [
       // Docker环境必需参数
       "--no-sandbox",
-      "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
-      
-      // 群辉NAS资源优化
-      "--memory-pressure-off",
-      "--max_old_space_size=512",
-      "--single-process",
-      "--disable-background-timer-throttling",
-      "--disable-renderer-backgrounding",
-      
-      // 精简功能配置
-      "--no-first-run",
-      "--disable-extensions",
-      "--disable-notifications",
-      "--disable-web-security",
-      "--disable-features=VizDisplayCompositor,TranslateUI",
-      "--disable-blink-features=AutomationControlled",
-      "--disable-ipc-flooding-protection",
-      "--disable-default-apps",
-      "--disable-sync",
-      "--headless=new"
     ],
-    ignoreDefaultArgs: ["--enable-automation"],
     protocolTimeout: 180000, // 降低超时时间
     waitForInitialPage: false,
   };
