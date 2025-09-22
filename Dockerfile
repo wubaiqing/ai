@@ -27,13 +27,11 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 # 复制package.json和pnpm-lock.yaml
 COPY package*.json ./
-COPY pnpm-lock.yaml ./
+# COPY pnpm-lock.yaml ./
 
 # 安装pnpm并安装依赖
 RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile
-
-# 项目文件将通过volume挂载，无需复制
+    pnpm install 
 
 # 创建必要的目录
 RUN mkdir -p reports logs
