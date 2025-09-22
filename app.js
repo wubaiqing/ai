@@ -237,8 +237,20 @@ function main() {
     // 每天晚上11点生成报告
     scheduler.addTask('generate-report', '0 23 * * *', 'npm', ['run', 'generate-report']);
     
-    // 启动调度器
-    scheduler.start();
+    // 启动时立即执行一次抓取任务
+    log('INFO', 'Executing initial crawl task on startup...');
+    executeCommand('npm', ['start'])
+        .then(() => {
+            log('INFO', 'Initial crawl task completed successfully');
+        })
+        .catch((error) => {
+            log('ERROR', `Initial crawl task failed: ${error.message}`);
+        })
+        .finally(() => {
+            // 启动调度器
+            log('INFO', 'Starting task scheduler for periodic execution...');
+            scheduler.start();
+        });
     
     // 优雅关闭处理
     process.on('SIGINT', () => {
