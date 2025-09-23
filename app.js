@@ -12,12 +12,22 @@ const fs = require('fs');
 // 日志函数
 function log(level, message, tag = 'APP') {
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    const logMessage = `[${timestamp}] [${tag}] ${message}`;
-    console.log(logMessage);
+    const logMessage = `[${timestamp}] [${level}] [${tag}] ${message}`;
     
-    // 写入日志文件
-    const logFile = path.join(__dirname, 'logs', 'app.log');
-    fs.appendFileSync(logFile, logMessage + '\n');
+    // 根据日志级别输出到不同的流
+    if (level === 'ERROR') {
+        console.error(logMessage);
+    } else {
+        console.log(logMessage);
+    }
+    
+    // 安全地写入日志文件
+    try {
+        const logFile = path.join(__dirname, 'logs', 'app.log');
+        fs.appendFileSync(logFile, logMessage + '\n');
+    } catch (error) {
+        console.error(`Failed to write log: ${error.message}`);
+    }
 }
 
 // 执行shell命令
@@ -32,6 +42,12 @@ function executeCommand(command, args = [], options = {}) {
         let stdout = '';
         let stderr = '';
         
+        // 设置超时机制
+        const timeout = setTimeout(() => {
+            child.kill('SIGTERM');
+            reject(new Error(`Command timeout: ${command} ${args.join(' ')}`));
+        }, 300000); // 5分钟超时
+        
         child.stdout?.on('data', (data) => {
             stdout += data.toString();
             console.log(data.toString().trim());
@@ -43,37 +59,41 @@ function executeCommand(command, args = [], options = {}) {
         });
         
         child.on('close', (code) => {
+            clearTimeout(timeout);
             if (code === 0) {
                 resolve({ stdout, stderr, code });
             } else {
-                reject(new Error(`Command failed with code ${code}: ${stderr}`));
+                reject(new Error(`Command failed with code ${code}: ${stderr || 'No error message'}`));
             }
         });
         
         child.on('error', (error) => {
-            reject(error);
+            clearTimeout(timeout);
+            reject(new Error(`Command execution error: ${error.message}`));
         });
     });
 }
 
-// 任务执行函数
+// 任务调度器类
 class TaskScheduler {
     constructor() {
-        this.tasks = [];
+        this.tasks = new Map();
         this.running = false;
+        this.interval = null;
     }
     
     // 添加定时任务
     addTask(name, cronTime, command, args = []) {
-        this.tasks.push({
+        const nextRun = this.getNextRunTime(cronTime);
+        this.tasks.set(name, {
             name,
             cronTime,
             command,
             args,
             lastRun: null,
-            nextRun: this.getNextRunTime(cronTime)
+            nextRun
         });
-        log('INFO', `Task added: ${name} - Next run: ${this.formatTime(this.getNextRunTime(cronTime))}`);
+        log('INFO', `Task added: ${name} - Next run: ${this.formatTime(nextRun)}`);
     }
     
     // 解析cron时间表达式 (简化版，支持 "分 时 日 月 周")
@@ -126,6 +146,8 @@ class TaskScheduler {
             
         } catch (error) {
             log('ERROR', `Task failed: ${task.name} - ${error.message}`, 'TASK');
+            // 任务失败时，仍然更新下次运行时间，避免重复执行
+            task.nextRun = this.getNextRunTime(task.cronTime);
         }
     }
     
@@ -152,7 +174,7 @@ class TaskScheduler {
     checkTasks() {
         const now = new Date();
         
-        for (const task of this.tasks) {
+        for (const task of this.tasks.values()) {
             if (task.nextRun <= now) {
                 // 异步执行任务，不阻塞其他任务
                 this.executeTask(task).catch(error => {
@@ -173,23 +195,7 @@ class TaskScheduler {
     }
 }
 
-// 日志清理函数
-function cleanupLogs() {
-    const logsDir = path.join(__dirname, 'logs');
-    const files = fs.readdirSync(logsDir);
-    const now = Date.now();
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7天
-    
-    files.forEach(file => {
-        const filePath = path.join(logsDir, file);
-        const stats = fs.statSync(filePath);
-        
-        if (now - stats.mtime.getTime() > maxAge) {
-            fs.unlinkSync(filePath);
-            log('INFO', `Cleaned up old log file: ${file}`, 'CLEANUP');
-        }
-    });
-}
+
 
 // 主函数
 function main() {
@@ -199,43 +205,35 @@ function main() {
     const dirs = ['logs', 'reports'];
     dirs.forEach(dir => {
         const dirPath = path.join(__dirname, dir);
-        if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath, { recursive: true });
-            log('INFO', `Created directory: ${dir}`);
+        try {
+            if (!fs.existsSync(dirPath)) {
+                fs.mkdirSync(dirPath, { recursive: true });
+                log('INFO', `Created directory: ${dir}`);
+            }
+        } catch (error) {
+            log('ERROR', `Failed to create directory ${dir}: ${error.message}`);
+            process.exit(1);
         }
     });
     
     // 创建任务调度器
     const scheduler = new TaskScheduler();
     
-    // 添加定时任务（对应原来的cron任务）
+    // 添加定时任务
     
-    // 每天凌晨2点清理日志
-    scheduler.addTask('cleanup-logs', '0 2 * * *', 'node', ['-e', `
-        const fs = require('fs');
-        const path = require('path');
-        const logsDir = path.join('${__dirname}', 'logs');
-        const files = fs.readdirSync(logsDir);
-        const now = Date.now();
-        const maxAge = 7 * 24 * 60 * 60 * 1000;
-        files.forEach(file => {
-            const filePath = path.join(logsDir, file);
-            const stats = fs.statSync(filePath);
-            if (now - stats.mtime.getTime() > maxAge) {
-                fs.unlinkSync(filePath);
-                console.log('Cleaned up:', file);
-            }
-        });
-    `]);
-    
-    // 每天上午9点执行爬取推文任务
-    scheduler.addTask('crawl-tweets-morning', '0 9 * * *', 'npm', ['start']);
-    
-    // 每天下午4点执行爬取推文任务
-    scheduler.addTask('crawl-tweets-afternoon', '0 16 * * *', 'npm', ['start']);
+    // 每2小时执行一次数据抓取任务（0点开始，每2小时一次）
+    for (let hour = 0; hour < 24; hour += 2) {
+        const taskName = `crawl-tweets-${hour.toString().padStart(2, '0')}`;
+        const cronTime = `0 ${hour} * * *`;
+        scheduler.addTask(taskName, cronTime, 'npm', ['start']);
+    }
     
     // 每天晚上11点生成报告
     scheduler.addTask('generate-report', '0 23 * * *', 'npm', ['run', 'generate-report']);
+    
+    // 启动调度器
+    log('INFO', 'Starting task scheduler...');
+    scheduler.start();
     
     // 启动时立即执行一次抓取任务
     log('INFO', 'Executing initial crawl task on startup...');
@@ -252,10 +250,6 @@ function main() {
             log('INFO', `Initial crawl task completed successfully - scraped ${scrapedTweets.length} tweets`);
         } catch (error) {
             log('ERROR', `Initial crawl task failed: ${error.message}`);
-        } finally {
-            // 启动调度器
-            log('INFO', 'Starting task scheduler for periodic execution...');
-            scheduler.start();
         }
     })();
     
