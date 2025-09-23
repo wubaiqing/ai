@@ -17,6 +17,8 @@
  */
 
 const axios = require('axios');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const { HttpProxyAgent } = require('http-proxy-agent');
 const { applicationConfig } = require('../reports/reportConfig');
 const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
 
@@ -107,15 +109,31 @@ class AIContentService {
         );
       }
 
-      // 配置HTTP客户端
-      this.httpClient = axios.create({
+      // 配置代理（如果存在）
+      const axiosConfig = {
         baseURL: baseUrl,
         timeout: requestTimeout,
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         }
-      });
+      };
+
+      // 添加代理支持
+      if (process.env.PROXY_HOST && process.env.PROXY_PORT) {
+        const proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+        const isHttps = baseUrl.startsWith('https');
+        axiosConfig.httpsAgent = isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl);
+        axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
+        
+        Logger.info('AI服务已配置代理', { 
+          proxyUrl: proxyUrl,
+          isHttps: isHttps 
+        });
+      }
+
+      // 配置HTTP客户端
+      this.httpClient = axios.create(axiosConfig);
       
       this.isConfigured = true;
       Logger.info('AI服务初始化成功', { 
@@ -206,16 +224,53 @@ class AIContentService {
   }
 
   /**
-   * 执行API请求
-   * @param {Object} requestPayload - 请求载荷
-   * @returns {Promise<Object>} API响应
+   * 发送API请求到AI服务（带重试机制）
+   * 
+   * 处理与AI服务的HTTP通信，包括请求构建、发送和响应处理
+   * 
    * @private
+   * @async
+   * @method makeAPIRequest
+   * @param {Object} requestData - 请求数据对象
+   * @param {string} requestData.model - 使用的AI模型名称
+   * @param {Array} requestData.messages - 消息数组
+   * @param {number} [requestData.max_tokens] - 最大token数量
+   * @param {number} [requestData.temperature] - 温度参数
+   * @param {number} [retryCount=0] - 当前重试次数
+   * @returns {Promise<Object>} API响应数据
+   * @throws {Error} 当API请求失败时抛出错误
+   * @example
+   * // 内部使用，发送结构化的API请求
+   * const response = await this.makeAPIRequest({
+   *   model: 'gpt-3.5-turbo',
+   *   messages: [{ role: 'user', content: 'Hello' }]
+   * });
    */
-  async makeAPIRequest(requestPayload) {
+  async makeAPIRequest(requestPayload, retryCount = 0) {
     try {
       const response = await this.httpClient.post('', requestPayload);
       return response.data;
     } catch (error) {
+      // 详细的错误诊断信息
+      const errorDetails = {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout,
+          proxy: error.config?.proxy || 'none'
+        },
+        isNetworkError: !error.response,
+        isTimeoutError: error.code === 'ECONNABORTED',
+        isProxyError: error.code === 'ECONNREFUSED' && process.env.PROXY_HOST
+      };
+
+      Logger.error('AI API请求失败', errorDetails);
+
       if (error.response) {
         // API返回了错误响应
         const { status, data } = error.response;
@@ -251,9 +306,33 @@ class AIContentService {
           error
         );
       } else if (error.request) {
-        // 请求发送失败
+        // 处理网络连接错误
+        let errorMessage = '网络连接失败';
+        if (errorDetails.isProxyError) {
+          errorMessage += `，代理服务器连接失败 (${process.env.PROXY_HOST}:${process.env.PROXY_PORT})`;
+        } else if (errorDetails.isTimeoutError) {
+          errorMessage += '，请求超时';
+        } else {
+          errorMessage += '，请检查网络连接和防火墙设置';
+        }
+        
+        // 对于网络错误，尝试重试
+        const maxRetries = 3;
+        const retryDelay = Math.pow(2, retryCount) * 1000; // 指数退避：1s, 2s, 4s
+        
+        if (retryCount < maxRetries && (errorDetails.isNetworkError || errorDetails.isTimeoutError)) {
+          Logger.warn(`网络请求失败，${retryDelay}ms后进行第${retryCount + 1}次重试`, {
+            retryCount: retryCount + 1,
+            maxRetries,
+            error: error.message
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return this.makeAPIRequest(requestPayload, retryCount + 1);
+        }
+        
         throw ErrorHandler.createStandardizedError(
-          '网络请求失败，请检查网络连接',
+          errorMessage,
           'NETWORK_ERROR',
           error
         );
