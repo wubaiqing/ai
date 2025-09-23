@@ -16,7 +16,9 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    git
+    git \
+    dcron \
+    bash
 
 # 设置Puppeteer中国镜像源以提高下载速度
 ENV PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary
@@ -33,12 +35,32 @@ COPY package*.json ./
 RUN npm install -g pnpm && \
     pnpm install 
 
+# 复制应用代码
+COPY . .
+
 # 创建必要的目录
 RUN mkdir -p reports logs
+
+# 设置脚本执行权限
+RUN chmod +x /app/scripts/*.sh
+
+# 安装crontab并设置权限
+RUN crontab /app/crontab
+
+# 创建启动脚本
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Starting cron daemon..."' >> /app/start.sh && \
+    echo 'mkdir -p /var/log' >> /app/start.sh && \
+    echo 'touch /var/log/cron.log' >> /app/start.sh && \
+    echo 'crond -f -d 8 &' >> /app/start.sh && \
+    echo 'echo "Cron daemon started"' >> /app/start.sh && \
+    echo 'echo "Starting Node.js application..."' >> /app/start.sh && \
+    echo 'exec npm run serve' >> /app/start.sh && \
+    chmod +x /app/start.sh
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "console.log('Health check passed')" || exit 1
 
-# 启动命令：直接运行长期服务
-CMD ["npm", "run", "serve"]
+# 启动命令：运行启动脚本
+CMD ["/app/start.sh"]

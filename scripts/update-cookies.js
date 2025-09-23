@@ -15,154 +15,151 @@ const APPLICATION_CONFIG = require("../src/lib/config");
 const { Logger } = require("../src/lib/utils");
 
 // 应用程序配置常量
-const LOCAL_CONFIG = {
+const CONFIG = {
   CHROME_EXECUTABLE_PATH:
     process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
   COOKIES_FILE_PATH: "../cookies.json",
-  LOGIN_OPERATION_TIMEOUT: 30000,
-  PAGE_NAVIGATION_TIMEOUT: 10000,
-  BROWSER_VIEWPORT: { width: 1280, height: 720 },
-};
-
-// 重试配置
-const RETRY_CONFIG = {
-  MAX_RETRIES: 3,
-  RETRY_DELAY: 2000,
+  LOGIN_TIMEOUT: 30000,
   PAGE_TIMEOUT: 30000,
   ELEMENT_TIMEOUT: 15000,
+  BROWSER_VIEWPORT: { width: 1280, height: 720 },
+  DOCKER_STARTUP_DELAY: 2000,
+  STABILITY_CHECK_DELAY: 1000,
+  INPUT_DELAY: 100,
+  CLICK_DELAY: 500,
 };
 
-// 页面导航重试机制
-async function navigateWithRetry(page, url, maxRetries = 3) {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      Logger.info(`尝试导航到 ${url} (第${attempt + 1}次)...`);
 
-      // 检查页面是否仍然连接
-      if (page.isClosed()) {
-        throw new Error("页面已关闭，无法导航");
-      }
 
-      await page.goto(url, {
-        waitUntil: "networkidle2",
-        timeout: 60000,
-      });
-      Logger.info("页面导航成功");
-      return;
-    } catch (error) {
-      const isProtocolError =
-        error.message.includes("Protocol error") ||
-        error.message.includes("Target closed") ||
-        error.message.includes("Target.setAutoAttach") ||
-        error.message.includes("Target.setDiscoverTargets");
+/**
+ * 睡眠函数
+ * @param {number} ms - 睡眠时间（毫秒）
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-      if (isProtocolError) {
-        Logger.warn(`页面导航协议错误 (第${attempt + 1}次): ${error.message}`);
-      } else {
-        Logger.warn(`页面导航失败 (第${attempt + 1}次): ${error.message}`);
-      }
+/**
+ * 页面导航
+ * @param {Object} page - Puppeteer页面对象
+ * @param {string} url - 目标URL
+ * @param {Object} options - 导航选项
+ * @returns {Promise<void>}
+ */
+async function navigateTo(page, url, options = {}) {
+  const { timeout = CONFIG.PAGE_TIMEOUT, waitUntil = "networkidle2" } = options;
+  
+  if (page.isClosed()) {
+    throw new Error("页面已关闭，无法导航");
+  }
+  
+  await page.goto(url, { waitUntil, timeout });
+}
 
-      if (attempt < maxRetries - 1) {
-        const waitTime = isProtocolError ? 5000 : 3000;
-        Logger.info(`等待 ${waitTime / 1000} 秒后重试导航...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-      } else {
-        throw new Error(
-          `页面导航失败，已重试 ${maxRetries} 次: ${error.message}`
-        );
-      }
+/**
+ * 创建浏览器实例
+ * @param {Object} launchOptions - Puppeteer启动选项
+ * @returns {Promise<Object>} 浏览器实例
+ */
+async function createBrowser(launchOptions) {
+  const browser = await puppeteer.launch(launchOptions);
+  
+  // 监听浏览器断开连接事件
+  browser.on("disconnected", () => {
+    Logger.warn("浏览器连接已断开");
+  });
+  
+  // 连接稳定性检查
+  await validateBrowserConnection(browser);
+  
+  return browser;
+}
+
+/**
+ * 验证浏览器连接稳定性
+ * @param {Object} browser - 浏览器实例
+ * @returns {Promise<void>}
+ */
+async function validateBrowserConnection(browser) {
+  try {
+    const pages = await browser.pages();
+    if (pages.length === 0) {
+      await browser.newPage();
     }
+    Logger.info("浏览器连接稳定性验证通过");
+  } catch (error) {
+    Logger.warn(`浏览器连接检查失败: ${error.message}`);
+    await closeBrowserSafely(browser);
+    throw error;
   }
 }
 
-// 创建带重试机制的浏览器实例
-async function createBrowserWithRetry(launchOptions) {
-  for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
-    try {
-      Logger.info(`尝试启动浏览器 (第${attempt + 1}次)...`);
-
-      // 添加启动前等待时间，特别是在重试时
-      if (attempt > 0) {
-        const waitTime = RETRY_CONFIG.RETRY_DELAY * (attempt + 1);
-        Logger.info(`启动前等待 ${waitTime}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-      }
-
-      const browser = await puppeteer.launch(launchOptions);
-
-      // 监听浏览器断开连接事件
-      browser.on("disconnected", () => {
-        Logger.warn("浏览器连接已断开");
-      });
-
-      // 添加连接稳定性检查
-      try {
-        const pages = await browser.pages();
-        if (pages.length === 0) {
-          await browser.newPage();
-        }
-        Logger.info("浏览器启动成功，连接稳定");
-        return browser;
-      } catch (connectionError) {
-        Logger.warn(`浏览器连接检查失败: ${connectionError.message}`);
-        try {
-          await browser.close();
-        } catch (closeError) {
-          Logger.warn(`关闭不稳定浏览器失败: ${closeError.message}`);
-        }
-        throw connectionError;
-      }
-    } catch (error) {
-      const isProtocolError =
-        error.message.includes("Protocol error") ||
-        error.message.includes("Target closed") ||
-        error.message.includes("Target.setAutoAttach") ||
-        error.message.includes("Target.setDiscoverTargets");
-
-      if (isProtocolError) {
-        Logger.warn(`检测到协议错误 (第${attempt + 1}次): ${error.message}`);
-      } else {
-        Logger.warn(`浏览器启动失败 (第${attempt + 1}次): ${error.message}`);
-      }
-
-      if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
-        const retryDelay = isProtocolError
-          ? RETRY_CONFIG.RETRY_DELAY * 2
-          : RETRY_CONFIG.RETRY_DELAY;
-        Logger.info(`等待 ${retryDelay}ms 后重试...`);
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-      } else {
-        throw new Error(
-          `浏览器启动失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次: ${error.message}`
-        );
-      }
-    }
-  }
-}
-
-// 创建带错误处理的页面实例
+/**
+ * 创建带错误处理的页面实例
+ * @param {Object} browser - 浏览器实例
+ * @returns {Promise<Object>} 页面实例
+ */
 async function createPageWithErrorHandling(browser) {
   try {
     const page = await browser.newPage();
-
+    
     // 设置超时
-    page.setDefaultTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
-    page.setDefaultNavigationTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
-
+    page.setDefaultTimeout(CONFIG.PAGE_TIMEOUT);
+    page.setDefaultNavigationTimeout(CONFIG.PAGE_TIMEOUT);
+    
     // 监听页面错误
     page.on("error", (error) => {
-      Logger.error(`页面错误: ${error.message}`);
+      Logger.error(`页面运行时错误: ${error.message}`);
     });
-
+    
     page.on("pageerror", (error) => {
       Logger.error(`页面JavaScript错误: ${error.message}`);
     });
-
+    
     return page;
   } catch (error) {
     Logger.error(`创建页面失败: ${error.message}`);
     throw error;
   }
+}
+
+/**
+ * 安全关闭浏览器
+ * @param {Object} browser - 浏览器实例
+ * @returns {Promise<void>}
+ */
+async function closeBrowserSafely(browser) {
+  if (!browser || !browser.isConnected()) {
+    return;
+  }
+  
+  try {
+    const pages = await browser.pages();
+    await Promise.all(
+      pages.map(page => 
+        page.close().catch(err => 
+          Logger.warn(`关闭页面失败: ${err.message}`)
+        )
+      )
+    );
+    await browser.close();
+    Logger.info("浏览器已安全关闭");
+  } catch (error) {
+    Logger.error(`关闭浏览器时出错: ${error.message}`);
+  }
+}
+
+/**
+ * 等待元素出现
+ * @param {Object} page - 页面对象
+ * @param {string} selector - 选择器
+ * @param {Object} options - 等待选项
+ * @returns {Promise<void>}
+ */
+async function waitForElement(page, selector, options = {}) {
+  const { timeout = CONFIG.ELEMENT_TIMEOUT } = options;
+  await page.waitForSelector(selector, { timeout });
 }
 
 /**
@@ -186,13 +183,13 @@ async function authenticateAndSaveCookies(
 
     // Docker环境启动前额外等待
     Logger.info("Docker环境启动前等待...");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await sleep(CONFIG.DOCKER_STARTUP_DELAY);
 
     // 启动浏览器
     // 群辉NAS Docker环境优化配置
     const launchOptions = {
       headless: process.env.HEADLESS !== "false",
-      executablePath: LOCAL_CONFIG.CHROME_EXECUTABLE_PATH,
+      executablePath: CONFIG.CHROME_EXECUTABLE_PATH,
       timeout: 0,
       args: [
         // Docker环境必需参数
@@ -204,11 +201,11 @@ async function authenticateAndSaveCookies(
       waitForInitialPage: false,
     };
 
-    browserInstance = await createBrowserWithRetry(launchOptions);
+    browserInstance = await createBrowser(launchOptions);
 
     // 额外的连接稳定性检查
     Logger.info("执行连接稳定性检查...");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await sleep(CONFIG.STABILITY_CHECK_DELAY);
 
     // 验证浏览器连接状态
     if (!browserInstance.isConnected()) {
@@ -218,78 +215,27 @@ async function authenticateAndSaveCookies(
     webPage = await createPageWithErrorHandling(browserInstance);
 
     // 页面创建后稳定性检查
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await sleep(500);
 
     if (webPage.isClosed()) {
       throw new Error("页面创建后立即关闭，连接不稳定");
     }
 
-    await webPage.setViewport(LOCAL_CONFIG.BROWSER_VIEWPORT);
+    await webPage.setViewport(CONFIG.BROWSER_VIEWPORT);
     await webPage.setUserAgent(APPLICATION_CONFIG.getUserAgent());
 
     Logger.info("正在导航到 Twitter/X.com 登录页面...");
 
-    // 使用重试机制导航到登录页面
-    let navigationSuccess = false;
-    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
-      try {
-        await webPage.goto("https://x.com/i/flow/login", {
-          waitUntil: "networkidle2",
-          timeout: RETRY_CONFIG.PAGE_TIMEOUT,
-        });
-        navigationSuccess = true;
-        break;
-      } catch (error) {
-        Logger.warn(`页面导航失败 (第${attempt + 1}次): ${error.message}`);
-        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
-          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
-          await new Promise((resolve) =>
-            setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY)
-          );
-        }
-      }
-    }
-
-    if (!navigationSuccess) {
-      throw new Error(
-        `登录页面导航失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`
-      );
-    }
+    // 导航到登录页面
+    await navigateTo(webPage, "https://x.com/i/flow/login");
 
     // 等待用户名输入框加载完成
     Logger.info("等待用户名输入框加载...");
-
-    // 使用重试机制等待用户名输入框
-    let usernameInputFound = false;
-    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
-      try {
-        await webPage.waitForSelector('input[name="text"]', {
-          timeout: RETRY_CONFIG.ELEMENT_TIMEOUT,
-        });
-        usernameInputFound = true;
-        break;
-      } catch (error) {
-        Logger.warn(
-          `等待用户名输入框失败 (第${attempt + 1}次): ${error.message}`
-        );
-        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
-          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
-          await new Promise((resolve) =>
-            setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY)
-          );
-        }
-      }
-    }
-
-    if (!usernameInputFound) {
-      throw new Error(
-        `用户名输入框加载失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`
-      );
-    }
+    await waitForElement(webPage, 'input[name="text"]');
 
     // 填入用户账户名
     Logger.info("正在输入用户账户名...");
-    await webPage.type('input[name="text"]', userAccountName, { delay: 100 });
+    await webPage.type('input[name="text"]', userAccountName, { delay: CONFIG.INPUT_DELAY });
 
     // 点击进入下一步按钮
     Logger.info("点击进入下一步...");
@@ -304,13 +250,13 @@ async function authenticateAndSaveCookies(
 
     // 等待密码输入框或邮箱验证界面加载
     Logger.info("等待密码输入或验证步骤加载...");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await sleep(2000);
 
     // 检查是否需要进行邮箱验证
     const emailVerificationInput = await webPage.$('input[name="text"]');
     if (emailVerificationInput && userEmail) {
       Logger.info("检测到邮箱验证步骤，正在输入验证邮箱...");
-      await webPage.type('input[name="text"]', userEmail, { delay: 100 });
+      await webPage.type('input[name="text"]', userEmail, { delay: CONFIG.INPUT_DELAY });
       await webPage.evaluate(() => {
         const buttons = Array.from(
           document.querySelectorAll('[role="button"]')
@@ -322,43 +268,16 @@ async function authenticateAndSaveCookies(
         );
         if (nextButton) nextButton.click();
       });
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await sleep(2000);
     }
 
     // 等待密码输入框加载
     Logger.info("等待密码输入框加载...");
-
-    // 使用重试机制等待密码输入框
-    let passwordInputFound = false;
-    for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
-      try {
-        await webPage.waitForSelector('input[name="password"]', {
-          timeout: RETRY_CONFIG.ELEMENT_TIMEOUT,
-        });
-        passwordInputFound = true;
-        break;
-      } catch (error) {
-        Logger.warn(
-          `等待密码输入框失败 (第${attempt + 1}次): ${error.message}`
-        );
-        if (attempt < RETRY_CONFIG.MAX_RETRIES - 1) {
-          Logger.info(`等待 ${RETRY_CONFIG.RETRY_DELAY}ms 后重试...`);
-          await new Promise((resolve) =>
-            setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY)
-          );
-        }
-      }
-    }
-
-    if (!passwordInputFound) {
-      throw new Error(
-        `密码输入框加载失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`
-      );
-    }
+    await waitForElement(webPage, 'input[name="password"]');
 
     // 填入用户密码
     Logger.info("正在输入用户密码...");
-    await webPage.type('input[name="password"]', userPassword, { delay: 100 });
+    await webPage.type('input[name="password"]', userPassword, { delay: CONFIG.INPUT_DELAY });
 
     // 点击登录确认按钮
     Logger.info("点击登录确认按钮...");
@@ -375,7 +294,7 @@ async function authenticateAndSaveCookies(
     Logger.info("等待登录操作完成...");
     await webPage.waitForNavigation({
       waitUntil: "networkidle2",
-      timeout: LOCAL_CONFIG.LOGIN_OPERATION_TIMEOUT,
+      timeout: CONFIG.LOGIN_TIMEOUT,
     });
 
     // 检查是否登录成功（通过URL判断）
@@ -391,7 +310,7 @@ async function authenticateAndSaveCookies(
       Logger.info("正在保存cookies数据到本地文件...");
       const cookiesStoragePath = path.resolve(
         __dirname,
-        LOCAL_CONFIG.COOKIES_FILE_PATH
+        CONFIG.COOKIES_FILE_PATH
       );
       fs.writeFileSync(
         cookiesStoragePath,
@@ -407,7 +326,7 @@ async function authenticateAndSaveCookies(
       return false;
     }
   } catch (error) {
-    Logger.error("用户登录认证失败:", { error: error.message });
+    Logger.error(`用户登录认证失败:`, { error: error.message });
 
     // 检查是否是Target closed错误
     if (
@@ -419,26 +338,7 @@ async function authenticateAndSaveCookies(
 
     return false;
   } finally {
-    // 确保浏览器被正确关闭
-    try {
-      if (browserInstance && browserInstance.isConnected()) {
-        // 关闭所有页面
-        const pages = await browserInstance.pages();
-        await Promise.all(
-          pages.map((page) => {
-            return page.close().catch((err) => {
-              Logger.warn(`关闭页面失败: ${err.message}`);
-            });
-          })
-        );
-
-        // 关闭浏览器
-        await browserInstance.close();
-        Logger.info("浏览器已正确关闭");
-      }
-    } catch (closeError) {
-      Logger.error(`关闭浏览器时出错: ${closeError.message}`);
-    }
+    await closeBrowserSafely(browserInstance);
   }
 }
 
@@ -473,7 +373,7 @@ async function authenticateFromEnvironmentVariables() {
 function checkAuthenticationCookiesExist() {
   const cookiesStoragePath = path.resolve(
     __dirname,
-    LOCAL_CONFIG.COOKIES_FILE_PATH
+    CONFIG.COOKIES_FILE_PATH
   );
 
   if (!fs.existsSync(cookiesStoragePath)) {
