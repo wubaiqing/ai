@@ -390,6 +390,62 @@ class AIContentService {
    * // 内部使用，生成包含上下文和指令的完整提示词
    * const prompt = this.buildOptimizedPrompt(tweets);
    */
+  /**
+   * 预处理推文数据，进行主题分组和相似性分析
+   * @param {Array} tweetsData - 推文数据数组
+   * @returns {Array} 预处理后的推文数据
+   * @private
+   */
+  preprocessTweetsForGrouping(tweetsData) {
+    // 添加主题关键词提取和相似度分析
+    return tweetsData.map((tweet, index) => {
+      const sanitizedContent = DataFormatter.sanitizeTextForHtml(tweet.content);
+      const truncatedContent = DataFormatter.truncateTextToLength(sanitizedContent, 500);
+      
+      // 提取关键词用于主题分组（简单的关键词提取）
+      const keywords = this.extractKeywords(sanitizedContent);
+      
+      return {
+        ...tweet,
+        index: index + 1,
+        sanitizedContent,
+        truncatedContent,
+        keywords,
+        formattedContent: `${index + 1}. 内容: ${truncatedContent}\n   链接: ${tweet.url}\n   发布时间: ${tweet.published_date}`
+      };
+    });
+  }
+
+  /**
+   * 简单的关键词提取方法
+   * @param {string} content - 推文内容
+   * @returns {Array} 关键词数组
+   * @private
+   */
+  extractKeywords(content) {
+    // 简单的关键词提取：公司名、产品名、技术术语等
+    const techKeywords = [
+      'AI', '人工智能', 'GPT', 'ChatGPT', 'OpenAI', 'Claude', 'Anthropic',
+      '通义千问', 'Qwen', '阿里', 'Alibaba', '百度', 'Baidu', '腾讯', 'Tencent',
+      '字节跳动', 'ByteDance', '华为', 'Huawei', '小米', 'Xiaomi',
+      'API', 'SDK', '开源', 'GitHub', '模型', 'Model', 'LLM', 'NLP',
+      'TTS', '语音', '图像', 'Image', '视频', 'Video', '多模态',
+      'iOS', 'Android', 'Web', 'App', '应用', '发布', 'Release',
+      '更新', 'Update', '版本', 'Version', '功能', 'Feature'
+    ];
+    
+    const foundKeywords = [];
+    const lowerContent = content.toLowerCase();
+    
+    techKeywords.forEach(keyword => {
+      if (lowerContent.includes(keyword.toLowerCase())) {
+        foundKeywords.push(keyword);
+      }
+    });
+    
+    return foundKeywords;
+  }
+
   buildTweetAnalysisPrompt(tweetsData) {
     if (ValidationUtils.isEmptyOrInvalidArray(tweetsData)) {
       throw ErrorHandler.createStandardizedError('推文数据不能为空', 'EMPTY_TWEETS_DATA');
@@ -397,28 +453,50 @@ class AIContentService {
     
     const { maxReportItems, contentCategories } = applicationConfig.business;
     
-    // 格式化推文内容
-    const formattedTweets = tweetsData.map((tweet, index) => {
-      const sanitizedContent = DataFormatter.sanitizeTextForHtml(tweet.content);
-      const truncatedContent = DataFormatter.truncateTextToLength(sanitizedContent, 500);
-      
-      return `${index + 1}. 内容: ${truncatedContent}\n   链接: ${tweet.url}\n   发布时间: ${tweet.published_date}`;
+    // 预处理推文数据
+    const processedTweets = this.preprocessTweetsForGrouping(tweetsData);
+    
+    // 格式化推文内容，包含关键词信息
+    const formattedTweets = processedTweets.map(tweet => {
+      const keywordsText = tweet.keywords.length > 0 ? `\n   关键词: ${tweet.keywords.join(', ')}` : '';
+      return `${tweet.formattedContent}${keywordsText}`;
     }).join('\n\n');
     
     const categoriesText = contentCategories.join('、');
     
     return `请分析以下推文数据，提取有价值的科技资讯信息，生成一份中文简报。
 
-要求：
+分析要求：
 1. 只选择有价值的${categoriesText}相关内容
-2. 每条信息用①②③...格式编号
-3. 每条信息包含简要描述和消息来源链接
-4. 消息来源就是推文的URL链接
-5. 如果内容是英文或其他语言，请翻译成中文
-6. 按重要性排序，最多选择${maxReportItems}条最有价值的信息
-7. 格式参考：① 具体描述内容。消息来源
-8. 确保每条信息都有实际价值，避免重复或无意义的内容
-9. 优先选择技术创新、产品发布、行业动态等重要资讯
+2. 根据推文内容和关键词进行主题分组，相同公司、产品或技术领域的消息归为一组
+3. 如果某个主题只有一条消息，可以单独成组
+4. 如果某个主题有多条相关消息，请合并为一个主题组
+5. 按重要性和影响力排序，最多选择${maxReportItems}条最有价值的信息
+6. 优先选择技术创新、产品发布、行业动态、重大更新等重要资讯
+
+格式要求：
+1. 对于单个主题，使用带圆圈数字的主标题格式：① ② ③ ...
+2. 主标题应概括该主题的核心内容（如：公司名+主要动作）
+3. 对于同一主题下的多个消息源，使用数字编号的子项目格式：1）2）3）...
+4. 每个子项目包含详细描述和消息来源链接
+5. 消息来源格式为：消息来源（直接使用推文URL）
+6. 如果内容是英文或其他语言，请翻译成中文
+7. 确保每条信息都有实际价值，避免重复或无意义的内容
+
+格式示例：
+① 通义千问（Qwen）密集发布多款新模型
+1）发布了首个原生端到端全模态 AI 模型 Qwen3-Omni，能在一个模型中统一处理文本、图像、音频和视频，官方称在多项音视频基准测试中达到 SOTA 水平。已开源 Qwen3-Omni-30B-A3B 系列模型。消息来源
+2）Qwen-Image-Edit-2509：全新的图像编辑模型，支持多图像编辑、保持人脸和产品一致性、编辑文字内容及样式，并内置 ControlNet 支持。消息来源
+3）Qwen3-TTS-Flash：发布新的文本转语音（TTS）模型，支持 17 种音色、10 种语言及 9 种以上中文方言，首包响应时间仅 97 毫秒。消息来源
+
+② OpenAI 发布新功能更新
+1）具体功能描述。消息来源
+
+分组提示：
+- 相同公司的多个产品发布可以归为一组
+- 相同技术领域的不同公司动态可以分别成组
+- 关注推文中的关键词，如公司名、产品名、技术术语等
+- 优先合并具有明显关联性的消息
 
 推文数据：
 ${formattedTweets}
