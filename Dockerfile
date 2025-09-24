@@ -17,7 +17,6 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     git \
-    dcron \
     bash
 
 # 设置Puppeteer中国镜像源以提高下载速度
@@ -43,19 +42,8 @@ RUN mkdir -p reports logs
 
 # Note: No shell scripts in /app/scripts directory to set permissions for
 
-# 安装crontab并设置权限
-RUN crontab /app/crontab
-
-# 创建启动脚本
-RUN echo '#!/bin/bash' > /app/start.sh && \
-    echo 'echo "Starting cron daemon..."' >> /app/start.sh && \
-    echo 'mkdir -p /var/log' >> /app/start.sh && \
-    echo 'touch /var/log/cron.log' >> /app/start.sh && \
-    echo 'crond -f -d 8 &' >> /app/start.sh && \
-    echo 'echo "Cron daemon started"' >> /app/start.sh && \
-    echo 'echo "Starting Node.js application..."' >> /app/start.sh && \
-    echo 'exec npm run serve' >> /app/start.sh && \
-    chmod +x /app/start.sh
+# 设置启动脚本权限（使用现有的start.sh）
+RUN chmod +x /app/start.sh
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
