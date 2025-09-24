@@ -6,6 +6,13 @@
 
 const { connectionManager } = require('./connectionManager');
 const Logger = require('../lib/utils').Logger;
+const { createClient } = require('@supabase/supabase-js');
+
+// 初始化 Supabase 客户端
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 /**
  * 将推文数据存储到 Supabase 数据库
