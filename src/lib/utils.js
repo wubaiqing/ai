@@ -141,6 +141,18 @@ class Logger {
   static error(message, metadata) {
     this.log(applicationConfig.logging.levels.ERROR, message, metadata);
   }
+
+  /**
+   * 记录调试级别日志
+   * @param {string} message - 调试消息
+   * @param {Object} [metadata] - 调试信息
+   */
+  static debug(message, metadata) {
+    // 只在开发环境或启用调试模式时输出
+    if (process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true') {
+      this.log('DEBUG', message, metadata);
+    }
+  }
 }
 
 /**

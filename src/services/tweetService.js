@@ -15,7 +15,7 @@
  * @requires ../utils.js
  */
 
-const { createClient } = require('@supabase/supabase-js');
+const { connectionManager } = require('../data/connectionManager');
 const { applicationConfig } = require('../reports/reportConfig');
 const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('../lib/utils');
 
@@ -55,51 +55,10 @@ class TweetDataService {
    * });
    */
   constructor() {
-    this.supabaseClient = null;
-    this.isInitialized = false;
+    Logger.info('[推文服务] TweetDataService 初始化完成');
   }
 
-  /**
-   * 初始化Supabase数据库客户端
-   * 
-   * 创建并配置Supabase客户端实例，设置认证和连接参数
-   * 
-   * @private
-   * @method initializeSupabaseClient
-   * @throws {Error} 当Supabase配置无效时抛出错误
-   * @returns {void}
-   */
-  initializeDatabaseClient() {
-    try {
-      const { supabaseUrl, serviceRoleKey } = applicationConfig.database;
-      
-      if (ValidationUtils.isEmptyOrWhitespace(supabaseUrl)) {
-      throw ErrorHandler.createStandardizedError('Supabase URL未配置', 'MISSING_SUPABASE_URL');
-      }
-      
-      if (ValidationUtils.isEmptyOrWhitespace(serviceRoleKey)) {
-      throw ErrorHandler.createStandardizedError('Supabase Service Role Key未配置', 'MISSING_SERVICE_ROLE_KEY');
-      }
 
-      this.supabaseClient = createClient(supabaseUrl, serviceRoleKey);
-      this.isInitialized = true;
-      
-      Logger.info('Supabase客户端初始化成功');
-    } catch (error) {
-      Logger.error('Supabase客户端初始化失败', { error: error.message });
-      throw error;
-    }
-  }
-
-  /**
-   * 确保数据库客户端已正确初始化
-   * @private
-   */
-  ensureDatabaseClientReady() {
-    if (!this.isInitialized || !this.supabaseClient) {
-      this.initializeDatabaseClient();
-    }
-  }
 
   /**
    * 获取当天的推文数据
@@ -118,15 +77,13 @@ class TweetDataService {
    * });
    */
   async fetchTodayTweetCollection() {
-    try {
-      this.ensureDatabaseClientReady();
-      
+    return await connectionManager.executeWithRetry(async (client) => {
       Logger.info('开始获取当天推文数据...');
       
       const { startTime: todayStartTime, endTime: todayEndTime } = TimeUtils.getCurrentDayTimeRange();
       const { tableName: tweetTableName } = applicationConfig.database;
       
-      const { data: tweetDataCollection, error: databaseQueryError } = await this.supabaseClient
+      const { data: tweetDataCollection, error: databaseQueryError } = await client
         .from(tweetTableName)
         .select('*')
         .gte('created_at', todayStartTime)
@@ -145,10 +102,7 @@ class TweetDataService {
       Logger.info(`成功获取到 ${retrievedTweetCount} 条推文数据`);
       
       return tweetDataCollection || [];
-    } catch (error) {
-      Logger.error('获取当天推文数据失败', { error: error.message });
-      throw error;
-    }
+    }, 'fetch_today_tweets');
   }
 
   /**
@@ -166,9 +120,7 @@ class TweetDataService {
    * const tweets = await tweetService.getTweetsByDateRange(startDate, endDate);
    */
   async fetchTweetCollectionByDateRange(dateRangeStart, dateRangeEnd) {
-    try {
-      this.ensureDatabaseClientReady();
-      
+    return await connectionManager.executeWithRetry(async (client) => {
       if (ValidationUtils.isEmptyOrWhitespace(dateRangeStart) || ValidationUtils.isEmptyOrWhitespace(dateRangeEnd)) {
       throw ErrorHandler.createStandardizedError('开始日期和结束日期不能为空', 'INVALID_DATE_RANGE');
       }
@@ -177,7 +129,7 @@ class TweetDataService {
       
       const { tableName: tweetTableName } = applicationConfig.database;
       
-      const { data: rangedTweetCollection, error: rangeQueryError } = await this.supabaseClient
+      const { data: rangedTweetCollection, error: rangeQueryError } = await client
         .from(tweetTableName)
         .select('*')
         .gte('created_at', dateRangeStart)
@@ -196,10 +148,7 @@ class TweetDataService {
       Logger.info(`成功获取到 ${retrievedRangedTweetCount} 条推文数据`);
       
       return rangedTweetCollection || [];
-    } catch (error) {
-      Logger.error('根据日期范围获取推文数据失败', { error: error.message });
-      throw error;
-    }
+    }, 'fetch_tweets_by_date_range');
   }
 
 
