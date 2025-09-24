@@ -41,8 +41,7 @@ COPY . .
 # 创建必要的目录
 RUN mkdir -p reports logs
 
-# 设置脚本执行权限
-RUN chmod +x /app/scripts/*.sh
+# Note: No shell scripts in /app/scripts directory to set permissions for
 
 # 安装crontab并设置权限
 RUN crontab /app/crontab
