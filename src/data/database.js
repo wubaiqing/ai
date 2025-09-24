@@ -12,75 +12,64 @@ const Logger = require('../lib/utils').Logger;
  * @param {Array} tweetDataArray - 推文数据数组
  * @returns {Promise<Object>} 数据存储结果
  */
-async function storeTweetDataToSupabase(tweetDataArray) {
-  if (!Array.isArray(tweetDataArray) || tweetDataArray.length === 0) {
-    Logger.warn('[数据库] 推文数据为空或格式不正确');
-    return { success: false, message: '推文数据为空' };
+async function storeTweetDataToSupabase(tweets) {
+  if (!tweets || tweets.length === 0) {
+    Logger.info('没有推文数据需要存储');
+    return { success: true, count: 0, skipped: 0, message: '没有数据需要存储' };
   }
 
-  return await connectionManager.executeWithRetry(async (client) => {
-    Logger.info(`[数据库] 开始存储推文数据，共 ${tweetDataArray.length} 条`);
+  const BATCH_SIZE = 10; // 每批处理10条数据
+  Logger.info(`开始存储 ${tweets.length} 条推文数据到 Supabase，批量大小: ${BATCH_SIZE}`);
 
-    // 对推文数据进行去重处理，基于 url 字段
-    Logger.info(`[数据库] 开始去重处理，原始数据 ${tweetDataArray.length} 条`);
-    
-    // 统计URL重复情况
-    const urlCounts = {};
-    tweetDataArray.forEach(tweet => {
-      urlCounts[tweet.url] = (urlCounts[tweet.url] || 0) + 1;
-    });
-    
-    const duplicateUrls = Object.entries(urlCounts).filter(([url, count]) => count > 1);
-    if (duplicateUrls.length > 0) {
-      Logger.info(`[数据库] 发现重复URL ${duplicateUrls.length} 个:`);
-      duplicateUrls.slice(0, 5).forEach(([url, count]) => {
-        Logger.info(`  - ${url}: ${count} 次`);
-      });
-      if (duplicateUrls.length > 5) {
-        Logger.info(`  - ... 还有 ${duplicateUrls.length - 5} 个重复URL`);
-      }
-    }
-    
-    const uniqueTweets = tweetDataArray.filter((tweet, index, self) => 
-      index === self.findIndex(t => t.url === tweet.url)
-    );
-    
-    const duplicatesRemoved = tweetDataArray.length - uniqueTweets.length;
-    Logger.info(`[数据库] 去重处理：原始 ${tweetDataArray.length} 条，去重后 ${uniqueTweets.length} 条，移除重复 ${duplicatesRemoved} 条`);
+  let totalInserted = 0;
+  let totalSkipped = 0;
+  let hasError = false;
+  let errorMessage = '';
 
-    // 批量处理数据，每次最多处理100条
-    const batchSize = 100;
-    let totalInserted = 0;
-    const results = [];
-
-    for (let i = 0; i < uniqueTweets.length; i += batchSize) {
-      const batch = uniqueTweets.slice(i, i + batchSize);
-      
-      const { data: insertedData, error: insertionError } = await client
+  // 分批处理数据
+  for (let i = 0; i < tweets.length; i += BATCH_SIZE) {
+    const batch = tweets.slice(i, i + BATCH_SIZE);
+    
+    try {
+      const { data, error } = await supabase
         .from('tweets')
         .upsert(batch, { 
           onConflict: 'url',
           ignoreDuplicates: false 
-        });
+        })
+        .select();
 
-      if (insertionError) {
-        Logger.error('[数据库] 批量存储失败', { 
-          error: insertionError.message, 
-          batchIndex: Math.floor(i / batchSize) + 1,
-          batchSize: batch.length
-        });
-        throw new Error(`数据库存储失败: ${insertionError.message}`);
+      if (error) {
+        Logger.error(`批次 ${Math.floor(i/BATCH_SIZE) + 1} 存储失败:`, error.message);
+        hasError = true;
+        errorMessage = error.message;
+        continue;
       }
 
-      totalInserted += batch.length;
-      results.push(insertedData);
+      const insertedCount = data ? data.length : 0;
+      const skippedCount = batch.length - insertedCount;
       
-      Logger.debug(`[数据库] 批量 ${Math.floor(i / batchSize) + 1} 存储成功，${batch.length} 条数据`);
+      totalInserted += insertedCount;
+      totalSkipped += skippedCount;
+      
+      Logger.info(`批次 ${Math.floor(i/BATCH_SIZE) + 1}: 新增 ${insertedCount} 条，跳过重复 ${skippedCount} 条`);
+      
+    } catch (err) {
+      Logger.error(`批次 ${Math.floor(i/BATCH_SIZE) + 1} 处理异常:`, err.message);
+      hasError = true;
+      errorMessage = err.message;
     }
+  }
 
-    Logger.info(`[数据库] 推文数据存储成功，共 ${totalInserted} 条`);
-    return { success: true, data: results.flat(), count: totalInserted };
-  }, 'store_tweets');
+  const result = {
+    success: !hasError,
+    count: totalInserted,
+    skipped: totalSkipped,
+    message: hasError ? errorMessage : `成功处理 ${tweets.length} 条推文`
+  };
+
+  Logger.info(`✅ 推文数据存储完成 - 总计新增: ${totalInserted} 条，跳过重复: ${totalSkipped} 条`);
+  return result;
 }
 
 /**

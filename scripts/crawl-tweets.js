@@ -367,6 +367,9 @@ async function scrapeTwitterListWithAuthentication(
     let previousTweetCount = 0;
     let consecutiveEmptyScrolls = 0;
     let currentScrollCount = 0;
+    let totalStoredTweets = 0;
+    const BATCH_SIZE = 10; // 每10条推文进行一次存储
+    let pendingTweets = []; // 待存储的推文缓存
 
     Logger.info("开始收集推文数据...");
 
@@ -393,7 +396,7 @@ async function scrapeTwitterListWithAuthentication(
         })
       );
 
-      // 过滤有效推文并去重
+      // 过滤有效推文
       const validNewTweets = currentPageTweets.filter(
         (tweet) =>
           tweet.url &&
@@ -402,21 +405,51 @@ async function scrapeTwitterListWithAuthentication(
           tweet.content.trim() !== ""
       );
 
-      // 基于URL去重合并
-      const allTweets = [...collectedTweets, ...validNewTweets];
-      const uniqueTweetMap = new Map();
+      // 找出真正的新推文（不在已收集的推文中）
+      const existingUrls = new Set(collectedTweets.map(t => t.url));
+      const actualNewTweets = validNewTweets.filter(tweet => !existingUrls.has(tweet.url));
+      
+      if (actualNewTweets.length > 0) {
+        // 添加到收集列表和待存储缓存
+        collectedTweets.push(...actualNewTweets);
+        pendingTweets.push(...actualNewTweets);
+        
+        Logger.info(`发现 ${actualNewTweets.length} 条新推文，当前总计 ${collectedTweets.length} 条`);
+        
+        // 检查是否达到批量存储阈值
+        if (pendingTweets.length >= BATCH_SIZE) {
+          const tweetsToStore = pendingTweets.splice(0, BATCH_SIZE);
+          const databaseReadyTweets = tweetsToStore.map((tweet) => ({
+            content: tweet.content,
+            url: tweet.url,
+            created_at: new Date().toISOString(),
+            list_id: listId,
+          }));
 
-      allTweets.forEach((tweet) => {
-        if (!uniqueTweetMap.has(tweet.url)) {
-          uniqueTweetMap.set(tweet.url, tweet);
+          try {
+            const startTime = Date.now();
+            const result = await storeTweetDataToSupabase(databaseReadyTweets);
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            
+            if (result.success) {
+              totalStoredTweets += result.count;
+              const skippedCount = result.skipped || 0;
+              Logger.info(`✅ 批次存储完成 [${duration}ms]：新增 ${result.count} 条，跳过重复 ${skippedCount} 条，累计存储 ${totalStoredTweets} 条`);
+            } else {
+              Logger.error(`❌ 存储结果异常: ${result.message || '未知错误'}`);
+              pendingTweets.unshift(...tweetsToStore);
+            }
+          } catch (error) {
+            Logger.error(`❌ 存储推文失败: ${error.message}`);
+            Logger.error(`   失败的推文URL: ${tweetsToStore.map(t => t.url.split('/').pop()).join(', ')}`);
+            // 将失败的推文重新加入待存储队列
+            pendingTweets.unshift(...tweetsToStore);
+          }
         }
-      });
-
-      collectedTweets = Array.from(uniqueTweetMap.values());
-      Logger.info(`当前已收集 ${collectedTweets.length} 条推文`);
-
-      // 检查是否有新推文
-      if (collectedTweets.length === previousTweetCount) {
+        
+        consecutiveEmptyScrolls = 0;
+      } else {
         consecutiveEmptyScrolls++;
         if (consecutiveEmptyScrolls >= CONFIG.CONSECUTIVE_EMPTY_SCROLL_LIMIT) {
           Logger.info(
@@ -424,9 +457,6 @@ async function scrapeTwitterListWithAuthentication(
           );
           break;
         }
-      } else {
-        consecutiveEmptyScrolls = 0;
-        previousTweetCount = collectedTweets.length;
       }
 
       await page.evaluate((scrollRange) => {
@@ -442,21 +472,35 @@ async function scrapeTwitterListWithAuthentication(
       currentScrollCount++;
     }
 
-    Logger.info(`爬取完成，共获取 ${collectedTweets.length} 条推文`);
-
-    if (collectedTweets.length > 0) {
-      const databaseReadyTweets = collectedTweets.map((tweet) => ({
+    // 存储剩余的推文
+    if (pendingTweets.length > 0) {
+      const databaseReadyTweets = pendingTweets.map((tweet) => ({
         content: tweet.content,
         url: tweet.url,
         created_at: new Date().toISOString(),
         list_id: listId,
       }));
 
-      await storeTweetDataToSupabase(databaseReadyTweets);
-      Logger.info(`成功存储 ${collectedTweets.length} 条推文到数据库`);
-    } else {
-      Logger.warn("未获取到推文数据");
+      try {
+        const startTime = Date.now();
+        const result = await storeTweetDataToSupabase(databaseReadyTweets);
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+        
+        if (result.success) {
+          totalStoredTweets += result.count;
+          const skippedCount = result.skipped || 0;
+          Logger.info(`✅ 剩余推文存储完成 [${duration}ms]：新增 ${result.count} 条，跳过重复 ${skippedCount} 条`);
+        } else {
+          Logger.error(`❌ 剩余推文存储异常: ${result.message || '未知错误'}`);
+        }
+      } catch (error) {
+        Logger.error(`❌ 存储剩余推文失败: ${error.message}`);
+        Logger.error(`   失败的推文数量: ${pendingTweets.length}`);
+      }
     }
+
+    Logger.info(`🎉 爬取完成！共获取 ${collectedTweets.length} 条推文，成功存储 ${totalStoredTweets} 条到数据库`);
 
     return collectedTweets;
   } catch (error) {
