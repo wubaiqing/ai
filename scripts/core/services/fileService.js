@@ -62,8 +62,8 @@ class FileOperationService {
    */
   constructor() {
     this.config = applicationConfig;
-    this.reportDirectory = applicationConfig.reportOutput.baseDirectory;
-    this.encoding = applicationConfig.reportOutput.encoding;
+    this.reportDirectory = applicationConfig.output.baseDirectory;
+    this.encoding = applicationConfig.output.encoding;
   }
 
   /**
@@ -72,7 +72,7 @@ class FileOperationService {
    * @returns {Promise<void>}
    */
   async ensureDirectoryPathExists(targetDirectoryPath = null) {
-    const resolvedDirectoryPath = targetDirectoryPath || this.config.reportOutput.baseDirectory;
+    const resolvedDirectoryPath = targetDirectoryPath || this.config.output.baseDirectory;
     
     try {
       await fs.access(resolvedDirectoryPath);

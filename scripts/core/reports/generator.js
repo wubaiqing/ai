@@ -21,7 +21,7 @@
 const { tweetDataService } = require('../services/tweetService');
 const { aiContentService } = require('../services/aiService');
 const { fileOperationService } = require('../services/fileService');
-const { applicationConfig } = require('./reportConfig');
+const { applicationConfig } = require('./config');
 const { Logger, TimeUtils, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
 const { TimezoneUtils } = require('../lib/timezone');
 

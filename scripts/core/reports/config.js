@@ -48,7 +48,7 @@ const applicationConfig = {
   // 报告输出配置 - 报告文件保存到项目根目录的 outputs/ 目录
   output: {
     baseDirectory: path.join(__dirname, '..', '..', '..', 'outputs'), // 项目根目录/outputs/
-    fileNameTemplate: 'ai-report-{date}.md',
+    fileNameTemplate: '{date}-ai-tech-brief.md',
     encoding: 'utf8'
   },
 
@@ -127,7 +127,7 @@ function validateEnvironmentVariables() {
  */
 function generateReportFileName() {
   const currentDate = TimezoneUtils.formatDate(new Date());
-  return applicationConfig.reportOutput.fileNameTemplate.replace('{date}', currentDate);
+  return applicationConfig.output.fileNameTemplate.replace('{date}', currentDate);
 }
 
 /**
@@ -145,7 +145,7 @@ function generateReportFileName() {
  */
 function getReportFilePath() {
   const fileName = generateReportFileName();
-  return path.join(applicationConfig.reportOutput.baseDirectory, fileName);
+  return path.join(applicationConfig.output.baseDirectory, fileName);
 }
 
 module.exports = {
