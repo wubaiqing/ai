@@ -70,7 +70,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
     const response = await fetch('/outputs/');
     if (!response.ok) {
       // 如果无法获取目录列表，返回已知的文件
-      const knownFiles = ['ai-report-2025-01-25.md', 'ai-report-2025-09-25.md'];
+      const knownFiles = ['ai-report-2025-01-25.md', 'ai-report-2025-09-25.md', '2025-09-25-ai-tech-brief.md'];
       const articles: ArticleListItem[] = [];
       
       for (const filename of knownFiles) {
@@ -97,7 +97,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
     }
     
     // 这里应该解析目录列表，但由于浏览器限制，我们使用已知文件列表
-    const knownFiles = ['ai-report-2025-01-25.md', 'ai-report-2025-09-25.md'];
+    const knownFiles = ['ai-report-2025-01-25.md', 'ai-report-2025-09-25.md', '2025-09-25-ai-tech-brief.md'];
     const articles: ArticleListItem[] = [];
     
     for (const filename of knownFiles) {
