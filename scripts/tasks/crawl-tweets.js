@@ -17,7 +17,7 @@ const { TimezoneUtils } = require("../core/lib/timezone");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
-  COOKIES_FILE_PATH: "../cookies.json",
+  COOKIES_FILE_PATH: APPLICATION_CONFIG.getTwitterConfiguration().cookiesFilePath,
   DEFAULT_MAX_SCROLL_COUNT: 100,
   PAGE_LOAD_TIMEOUT: 60000,
   CONSECUTIVE_EMPTY_SCROLL_LIMIT: 5,

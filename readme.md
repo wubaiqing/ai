@@ -65,7 +65,7 @@ cp .env.example .env
 docker-compose up -d
 
 # 4. 查看服务状态
-docker-compose logs -f twitter-ai
+docker-compose logs -f twitter-ai-reporter
 ```
 
 ### 💻 本地开发部署
@@ -418,14 +418,14 @@ docker-compose up -d
 docker-compose ps
 
 # 查看实时日志
-docker-compose logs -f twitter-ai
+docker-compose logs -f twitter-ai-reporter
 ```
 
 #### 3. 服务管理
 
 ```bash
 # 重启服务
-docker-compose restart twitter-ai
+docker-compose restart twitter-ai-reporter
 
 # 重新构建并启动
 docker-compose up -d --build
@@ -437,7 +437,7 @@ docker-compose stop
 docker-compose down
 
 # 进入容器调试
-docker-compose exec twitter-ai sh
+docker-compose exec twitter-ai-reporter sh
 ```
 
 ### 群辉 NAS 部署指南
@@ -568,8 +568,8 @@ chromium-browser --version
 #### 查看实时日志
 ```bash
 # Docker 环境 - 查看应用日志
-docker-compose logs -f twitter-ai
-docker-compose logs --tail=100 twitter-ai
+docker-compose logs -f twitter-ai-reporter
+docker-compose logs --tail=100 twitter-ai-reporter
 
 # 本地环境 - 查看日志文件
 tail -f logs/app.log
