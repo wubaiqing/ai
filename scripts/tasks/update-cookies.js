@@ -14,6 +14,7 @@ const path = require("path");
 const APPLICATION_CONFIG = require("../core/lib/config");
 const { Logger } = require("../core/lib/utils");
 const { TimezoneUtils } = require("../core/lib/timezone");
+const { handleCookieConsentWithRetry } = require("../core/lib/cookieConsent");
 
 // 应用程序配置常量
 const CONFIG = {
@@ -248,6 +249,15 @@ async function authenticateAndSaveCookies(
 
     // 导航到登录页面
     await navigateTo(webPage, "https://x.com/i/flow/login");
+
+    // 处理 cookie 同意弹窗
+    Logger.info("检查并处理 cookie 同意弹窗...");
+    await handleCookieConsentWithRetry(webPage, {
+      maxRetries: 2,
+      retryDelay: 1500,
+      timeout: 5000,
+      waitAfterClick: 1000
+    });
 
     // 等待用户名输入框加载完成
     Logger.info("等待用户名输入框加载...");

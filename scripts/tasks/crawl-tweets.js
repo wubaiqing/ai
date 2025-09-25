@@ -14,6 +14,7 @@ const { storeTweetDataToSupabase } = require("../core/data/database");
 const APPLICATION_CONFIG = require("../core/lib/config.js");
 const { Logger } = require("../core/lib/utils");
 const { TimezoneUtils } = require("../core/lib/timezone");
+const { handleCookieConsentWithRetry } = require("../core/lib/cookieConsent");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
@@ -338,24 +339,14 @@ async function scrapeTwitterListWithAuthentication(
       throw new Error(`页面导航失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
     }
 
-    // 处理cookie同意弹窗
-    try {
-      await page.waitForSelector('[data-testid="BottomBar"] [role="button"]', { timeout: 5000 });
-      await page.evaluate(() => {
-        const acceptButton = document.querySelector('[data-testid="BottomBar"] [role="button"]');
-        if (acceptButton && acceptButton.textContent.includes('Accept')) {
-          acceptButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }, { once: true, capture: true });
-          acceptButton.click();
-        }
-      });
-      Logger.info("已处理cookie同意弹窗");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error) {
-      Logger.info("未发现cookie弹窗或已处理");
-    }
+    // 处理 cookie 同意弹窗
+    Logger.info("检查并处理 cookie 同意弹窗...");
+    await handleCookieConsentWithRetry(page, {
+      maxRetries: 2,
+      retryDelay: 1500,
+      timeout: 5000,
+      waitAfterClick: 1000
+    });
 
     // 使用重试机制等待推文元素加载
     let elementsLoaded = false;
