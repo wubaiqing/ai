@@ -19,7 +19,7 @@
 const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { HttpProxyAgent } = require('http-proxy-agent');
-const { applicationConfig } = require('../reports/reportConfig');
+const { applicationConfig } = require('../reports/config');
 const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
 
 /**

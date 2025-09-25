@@ -21,8 +21,8 @@ logs
 *.log
 
 # 运行时生成的文件
-reports/*
-!reports/.gitkeep
+outputs/*
+!outputs/.gitkeep
 cookies.json
 
 # 开发工具

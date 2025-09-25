@@ -16,7 +16,7 @@
  */
 
 const { connectionManager } = require('../data/connectionManager');
-const { applicationConfig } = require('../reports/reportConfig');
+const { applicationConfig } = require('../reports/config');
 const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('../lib/utils');
 
 /**

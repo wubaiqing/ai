@@ -15,7 +15,7 @@
  * @namespace Utils
  */
 
-const { applicationConfig } = require('../reports/reportConfig');
+const { applicationConfig } = require('../reports/config');
 
 // 时区工具
 const { TimezoneUtils } = require('./timezone');

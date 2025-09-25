@@ -43,7 +43,7 @@ RUN npm install -g pnpm && \
 COPY . .
 
 # 创建必要的目录
-RUN mkdir -p reports logs
+RUN mkdir -p outputs logs
 
 # Note: No shell scripts in /app/scripts directory to set permissions for
 

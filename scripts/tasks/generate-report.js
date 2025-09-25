@@ -5,8 +5,8 @@
  * @requires ./src/lib/config
  */
 
-const { aiReportGenerator } = require('../core/reports/reportGenerator');
-const { applicationConfig, validateEnvironmentVariables } = require('../core/reports/reportConfig');
+const { aiReportGenerator } = require('../core/reports/generator');
+const { applicationConfig, validateEnvironmentVariables } = require('../core/reports/config');
 const { Logger, ErrorHandler } = require('../core/lib/utils');
 const { TimezoneUtils } = require('../core/lib/timezone');
 const { closeAllConnections } = require('../core/data/database');
@@ -88,7 +88,7 @@ function displayApplicationHelp() {
   - SILICONFLOW_API_KEY: 硅基流动平台API密钥
   
 输出:
-  生成的简报将保存到 reports/ 目录下
+  生成的简报将保存到 outputs/ 目录下
 `);
 }
 

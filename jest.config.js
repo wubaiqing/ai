@@ -19,21 +19,20 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/logs/',
-    '/reports/',
+    '/outputs/',
     '/supabase/'
   ],
   
   // 覆盖率配置
   collectCoverage: false,
   collectCoverageFrom: [
-    'src/**/*.js',
-    'scripts/**/*.js',
-    'utils/**/*.js',
-    '!src/**/*.test.js',
-    '!src/**/*.spec.js',
+    'scripts/core/**/*.js',
+    'scripts/tasks/**/*.js',
+    '!scripts/**/*.test.js',
+    '!scripts/**/*.spec.js',
     '!**/node_modules/**',
     '!**/logs/**',
-    '!**/reports/**'
+    '!**/outputs/**'
   ],
   
   // 覆盖率报告格式

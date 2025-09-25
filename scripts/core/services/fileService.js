@@ -19,7 +19,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
-const { applicationConfig, getReportFilePath } = require('../reports/reportConfig');
+const { applicationConfig, getReportFilePath } = require('../reports/config');
 const { Logger, TimeUtils, ValidationUtils, ErrorHandler } = require('../lib/utils');
 
 /**
@@ -53,7 +53,7 @@ class FileOperationService {
    * @example
    * const service = new FileOperationService({
    *   file: {
-   *     outputDirectory: './reports',
+   *     outputDirectory: './outputs',
    *     fileNamePrefix: 'daily_report_',
    *     fileExtension: '.txt',
    *     maxFileRetention: 30
@@ -156,7 +156,7 @@ class FileOperationService {
    * @example
    * const result = await fileService.saveReportToFile(
    *   'Daily Report Content',
-   *   '/reports/daily_report_2024-01-01.txt'
+   *   '/outputs/daily_report_2024-01-01.txt'
    * );
    * console.log(`文件已保存: ${result.filePath}`);
    */
@@ -215,7 +215,7 @@ class FileOperationService {
    * @throws {Error} 当文件不存在或读取失败时抛出错误
    * @example
    * const content = await fileService.readReportFromFile(
-   *   '/reports/daily_report_2024-01-01.txt'
+   *   '/outputs/daily_report_2024-01-01.txt'
    * );
    * console.log('文件内容:', content);
    */
