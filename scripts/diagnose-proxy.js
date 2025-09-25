@@ -107,7 +107,20 @@ async function diagnoseProxy() {
   console.log(`   PROXY_PORT: ${process.env.PROXY_PORT || '未设置'}`);
   console.log(`   PROXY_USERNAME: ${process.env.PROXY_USERNAME ? '已设置' : '未设置'}`);
   console.log(`   PROXY_PASSWORD: ${process.env.PROXY_PASSWORD ? '已设置' : '未设置'}`);
-  console.log(`   PROXY_URL: ${process.env.PROXY_URL ? process.env.PROXY_URL.replace(/:([^:@]+)@/, ':***@') : '未设置'}`);
+  // 构建代理URL用于显示
+  const buildProxyUrl = () => {
+    const host = process.env.PROXY_HOST;
+    const port = process.env.PROXY_PORT;
+    const username = process.env.PROXY_USERNAME;
+    const password = process.env.PROXY_PASSWORD;
+    if (username && password) {
+      return `http://${username}:${password}@${host}:${port}`;
+    } else {
+      return `http://${host}:${port}`;
+    }
+  };
+  const proxyUrl = (process.env.PROXY_HOST && process.env.PROXY_PORT) ? buildProxyUrl().replace(/:([^:@]+)@/, ':***@') : '未设置';
+  console.log(`   PROXY_URL (组合构建): ${proxyUrl}`);
   
   if (!process.env.PROXY_HOST || !process.env.PROXY_PORT) {
     console.error('❌ 代理配置不完整');

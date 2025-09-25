@@ -26,7 +26,7 @@ class ProxyValidator {
       port: process.env.PROXY_PORT,
       username: process.env.PROXY_USERNAME,
       password: process.env.PROXY_PASSWORD,
-      url: process.env.PROXY_URL
+      url: this.buildProxyUrl()
     };
 
     const result = {
