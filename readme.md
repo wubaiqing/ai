@@ -198,23 +198,43 @@ LOG_LEVEL=info
 
 ```
 twitter-ai-reporter/
-├── scripts/                 # 🚀 执行脚本
-│   ├── crawl-tweets.js     # Twitter 数据爬取
-│   ├── generate-report.js  # AI 简报生成
-│   └── update-cookies.js   # Cookie 认证管理
-├── src/                    # 📦 核心功能模块
-│   ├── lib/               # 工具库和配置
-│   ├── services/          # 业务服务模块
-│   └── data/              # 数据处理模块
-├── tests/                  # 🧪 测试文件
-├── logs/                   # 📝 日志文件目录
-├── outputs/                # 📊 报告输出目录
-├── docker/                 # 🐳 Docker 相关文件
-├── .env.example           # ⚙️ 环境变量模板
-├── docker-compose.yml     # 容器编排配置
-├── Dockerfile             # Docker 镜像配置
-├── crontab                # 定时任务配置
-└── package.json           # 📋 项目依赖配置
+├── scripts/                    # 🚀 执行脚本和核心模块
+│   ├── core/                  # 核心功能模块
+│   │   ├── data/             # 数据处理模块
+│   │   │   ├── connectionManager.js  # 数据库连接管理
+│   │   │   ├── database.js           # 数据库操作
+│   │   │   └── twitter.js            # Twitter 数据处理
+│   │   ├── lib/              # 工具库和配置
+│   │   │   ├── config.js            # 应用配置
+│   │   │   ├── proxyValidator.js    # 代理验证
+│   │   │   ├── timezone.js          # 时区工具
+│   │   │   └── utils.js             # 通用工具
+│   │   ├── reports/          # 报告生成模块
+│   │   │   ├── config.js            # 报告配置
+│   │   │   └── generator.js         # 报告生成器
+│   │   └── services/         # 业务服务模块
+│   │       ├── aiService.js         # AI 分析服务
+│   │       ├── fileService.js       # 文件操作服务
+│   │       └── tweetService.js      # 推文处理服务
+│   ├── tasks/                 # 执行任务脚本
+│   │   ├── crawl-tweets.js          # Twitter 数据爬取
+│   │   ├── diagnose-proxy.js        # 代理诊断
+│   │   ├── generate-report.js       # AI 简报生成
+│   │   └── update-cookies.js        # Cookie 认证管理
+│   └── tests/                 # 🧪 测试文件
+│       ├── connection-optimization.js # 连接优化测试
+│       ├── proxy-utils.js           # 代理工具测试
+│       ├── proxy.test.js            # 代理功能测试
+│       └── supabase-connection.test.js # 数据库连接测试
+├── logs/                      # 📝 日志文件目录
+├── outputs/                   # 📊 报告输出目录
+├── .env.example              # ⚙️ 环境变量模板
+├── app.js                    # 🎯 主应用服务（内置任务调度）
+├── start.sh                  # 启动脚本
+├── docker-compose.yml        # 容器编排配置
+├── Dockerfile                # Docker 镜像配置
+├── jest.config.js            # 测试配置
+└── package.json              # 📋 项目依赖配置
 ```
 
 ## 使用方法 📖
@@ -260,11 +280,32 @@ node -e "require('./src/lib/supabase').testConnection()"
 npm test
 ```
 
-## 自动任务调度 ⏰
+## 定时任务配置 ⏰
 
 ### 🎯 内置任务调度器
 
 项目采用 **Node.js 内置定时器**实现任务调度，无需配置系统 cron 或 shell 脚本。服务启动后自动按计划执行所有任务。
+
+### 定时任务配置
+
+项目使用 **Node.js 内置调度器** 进行任务调度，无需依赖系统 cron：
+
+```javascript
+// 在 start.js 中配置调度时间
+const SCHEDULE_TIME = process.env.SCHEDULE_TIME || '23:00'; // 默认每天 23:00
+
+// 支持的时间格式
+// '23:00'     - 每天 23:00
+// '*/2 * * * *' - 每 2 分钟（cron 格式）
+// '0 */6 * * *' - 每 6 小时
+```
+
+#### 调度器特性
+- ✅ **内置调度**: 无需系统 cron 依赖
+- ✅ **容器友好**: 完美适配 Docker 环境
+- ✅ **灵活配置**: 支持环境变量动态配置
+- ✅ **自动重启**: 任务失败后自动重新调度
+- ✅ **状态监控**: 实时显示下次执行时间
 
 **默认执行时间表：**
 
@@ -491,6 +532,83 @@ ls -la /usr/bin/chromium-browser
 # 测试浏览器启动
 chromium-browser --version
 ```
+
+## 📝 日志系统
+
+### 日志系统特性
+
+项目采用**内置日志管理系统**，提供统一的日志格式和自动化管理功能：
+
+- ✅ **统一日志格式**: 所有输出都包含 ISO 时间戳和任务标识符
+- ✅ **自动日志轮转**: 当日志文件超过指定大小时自动创建新文件
+- ✅ **智能清理**: 自动删除过期日志文件，保留最近的记录
+- ✅ **内存优化**: 适配群辉 NAS 等资源受限环境
+- ✅ **实时监控**: 支持实时日志查看和状态监控
+
+### 日志标识符说明
+
+| 标识符 | 含义 |
+|--------|------|
+| `[CONTAINER-START]` | 容器启动 |
+| `[SCHEDULER-START]` | 任务调度器启动 |
+| `[CRAWL-START]` | 开始爬取 |
+| `[CRAWL-SUCCESS]` | 爬取成功 |
+| `[CRAWL-ERROR]` | 爬取错误 |
+| `[AUTH-START]` | 开始认证 |
+| `[AUTH-SUCCESS]` | 认证成功 |
+| `[AUTH-ERROR]` | 认证错误 |
+| `[REPORT-START]` | 开始生成报告 |
+| `[REPORT-SUCCESS]` | 报告生成成功 |
+| `[REPORT-ERROR]` | 报告生成错误 |
+| `[LOG-CLEANUP]` | 日志清理 |
+| `[TASK-SCHEDULED]` | 任务已调度 |
+
+### 日志查看和管理
+
+#### 查看实时日志
+```bash
+# Docker 环境 - 查看应用日志
+docker-compose logs -f twitter-ai
+docker-compose logs --tail=100 twitter-ai
+
+# 本地环境 - 查看日志文件
+tail -f logs/app.log
+tail -f logs/error.log
+
+# 查看特定日期的日志
+ls logs/
+cat logs/2024-01-15.log
+```
+
+#### 日志文件结构
+```
+logs/
+├── app.log              # 当前应用日志
+├── error.log            # 错误日志
+├── 2024-01-15.log      # 按日期归档的日志
+├── 2024-01-14.log      # 历史日志文件
+└── .gitkeep            # Git 目录占位文件
+```
+
+#### 日志格式示例
+```
+[2024-01-15T09:00:02.123Z] [SCHEDULER-START] 任务调度器已启动
+[2024-01-15T09:00:05.456Z] [CRAWL-START] 开始执行推文爬取任务...
+[2024-01-15T09:00:10.789Z] [CRAWL-SUCCESS] 成功创建浏览器实例
+[2024-01-15T09:15:30.012Z] [CRAWL-SUCCESS] 推文爬取完成，共收集 25 条推文
+[2024-01-15T23:00:01.345Z] [REPORT-START] 开始生成 AI 分析报告
+[2024-01-15T23:05:15.678Z] [REPORT-SUCCESS] AI 报告生成完成: outputs/tech-report-2024-01-15.md
+```
+
+### 日志系统优势
+
+相比传统的 cron 日志系统，内置日志管理具有以下优势：
+
+1. **清晰的输出**: 移除了 cron 任务中的乱码和二进制数据
+2. **完整的信息**: 包含完整的时间戳和任务标识
+3. **统一的格式**: 所有日志输出都遵循统一的格式标准
+4. **自动管理**: 无需手动清理，系统自动处理日志轮转和清理
+5. **易于调试**: 结构化的日志信息便于问题定位和调试
 
 ## 故障排除 🔧
 
