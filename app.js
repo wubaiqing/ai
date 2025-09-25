@@ -8,10 +8,11 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { TimezoneUtils } = require('./src/lib/timezone');
 
 // 日志函数
 function log(level, message, tag = 'APP') {
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const timestamp = TimezoneUtils.getTimestamp();
     const logMessage = `[${timestamp}] [${level}] [${tag}] ${message}`;
     
     // 根据日志级别输出到不同的流
@@ -93,7 +94,7 @@ class TaskScheduler {
             lastRun: null,
             nextRun
         });
-        log('INFO', `Task added: ${name} - Next run: ${this.formatTime(nextRun)}`);
+        log('INFO', `Task added: ${name} - Next run: ${TimezoneUtils.formatDateTime(nextRun)}`);
     }
     
     // 解析cron时间表达式 (简化版，支持 "分 时 日 月 周")
@@ -127,7 +128,7 @@ class TaskScheduler {
     
     // 格式化时间
     formatTime(date) {
-        return date.toISOString().replace('T', ' ').substring(0, 19);
+        return TimezoneUtils.formatDateTime(date);
     }
     
     // 执行任务

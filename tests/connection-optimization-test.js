@@ -6,6 +6,7 @@
 const { connectionManager } = require('../src/data/connectionManager');
 const { storeTweetDataToSupabase, retrieveTweetDataFromSupabase, getConnectionStats } = require('../src/data/database');
 const Logger = require('../src/lib/utils').Logger;
+const { TimezoneUtils } = require('../src/lib/timezone');
 
 /**
  * 生成测试推文数据
@@ -17,8 +18,8 @@ function generateTestTweets(count) {
   for (let i = 0; i < count; i++) {
     tweets.push({
       url: `https://twitter.com/test/status/${Date.now()}_${i}`,
-      content: `测试推文内容 ${i + 1} - ${new Date().toISOString()}`,
-      published_date: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+      content: `测试推文内容 ${i + 1} - ${TimezoneUtils.getTimestamp()}`,
+      published_date: TimezoneUtils.formatDateTime(new Date(Date.now() - Math.random() * 86400000)),
       list_id: 'test_list'
     });
   }

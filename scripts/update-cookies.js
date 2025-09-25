@@ -13,6 +13,7 @@ const fs = require("fs");
 const path = require("path");
 const APPLICATION_CONFIG = require("../src/lib/config");
 const { Logger } = require("../src/lib/utils");
+const { TimezoneUtils } = require("../src/lib/timezone");
 
 // 应用程序配置常量
 const CONFIG = {
@@ -200,6 +201,20 @@ async function authenticateAndSaveCookies(
       protocolTimeout: 180000, // 降低超时时间
       waitForInitialPage: false,
     };
+
+    // 配置HTTP代理（如果环境变量中存在）
+    if (process.env.PROXY_HOST && process.env.PROXY_PORT) {
+      let proxyServer;
+      if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+        // 使用带认证的代理
+        proxyServer = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+      } else {
+        // 使用无认证代理
+        proxyServer = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+      }
+      launchOptions.args.push(`--proxy-server=${proxyServer}`);
+      Logger.info(`已配置HTTP代理: ${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`);
+    }
 
     browserInstance = await createBrowser(launchOptions);
 
@@ -404,14 +419,14 @@ function checkAuthenticationCookiesExist() {
  */
 async function executeAuthenticationProcess() {
   console.log(
-    `[${new Date().toISOString()}] [COOKIE-UPDATE-START] Twitter/X.com 自动登录认证脚本启动`
+    `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-START] Twitter/X.com 自动登录认证脚本启动`
   );
   Logger.info("[启动] Twitter/X.com 自动登录认证脚本");
 
   // 检查是否已存在有效的认证cookies
   if (checkAuthenticationCookiesExist()) {
     console.log(
-      `[${new Date().toISOString()}] [COOKIE-UPDATE-SKIP] 已存在有效cookies文件`
+      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-SKIP] 已存在有效cookies文件`
     );
     Logger.info(
       "[提示] 已存在有效cookies文件，如需重新登录请删除 cookies.json 文件"
@@ -424,13 +439,13 @@ async function executeAuthenticationProcess() {
 
   if (authenticationSuccess) {
     console.log(
-      `[${new Date().toISOString()}] [COOKIE-UPDATE-SUCCESS] 用户登录认证成功，cookies数据已保存`
+      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-SUCCESS] 用户登录认证成功，cookies数据已保存`
     );
     Logger.info("[完成] 用户登录认证成功，cookies数据已保存");
     process.exit(0);
   } else {
     console.error(
-      `[${new Date().toISOString()}] [COOKIE-UPDATE-ERROR] 用户登录认证失败`
+      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-ERROR] 用户登录认证失败`
     );
     Logger.error("[失败] 用户登录认证失败");
     process.exit(1);

@@ -121,15 +121,30 @@ class AIContentService {
 
       // 添加代理支持
       if (process.env.PROXY_HOST && process.env.PROXY_PORT) {
-        const proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+        let proxyUrl;
+        if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+          // 使用带认证的代理
+          proxyUrl = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+        } else {
+          // 使用无认证代理
+          proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+        }
+        
         const isHttps = baseUrl.startsWith('https');
         axiosConfig.httpsAgent = isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl);
         axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
         
         Logger.info('AI服务已配置代理', { 
-          proxyUrl: proxyUrl,
-          isHttps: isHttps 
-        });
+           proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
+           isHttps: isHttps,
+           hasAuth: !!(process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD)
+         });
+         
+         // 添加代理连接测试
+         axiosConfig.validateStatus = function (status) {
+           // 接受200-299范围的状态码，以及502（代理错误）用于诊断
+           return (status >= 200 && status < 300) || status === 502;
+         };
       }
 
       // 配置HTTP客户端

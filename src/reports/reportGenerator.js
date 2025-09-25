@@ -23,6 +23,7 @@ const { aiContentService } = require('../services/aiService');
 const { fileOperationService } = require('../services/fileService');
 const { applicationConfig } = require('./reportConfig');
 const { Logger, TimeUtils, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
+const { TimezoneUtils } = require('../lib/timezone');
 
 /**
  * 报告生成器管理类
@@ -123,7 +124,7 @@ class AIReportGenerator {
         metadata: {
           tweetsProcessed: normalizedTweetData.length,
           generationDuration: executionSummary.duration,
-          timestamp: new Date().toISOString()
+          timestamp: TimezoneUtils.getTimestamp()
         }
       };
       
@@ -134,7 +135,7 @@ class AIReportGenerator {
         success: false,
         error: error.message,
         errorCode: error.code || 'REPORT_GENERATION_ERROR',
-        timestamp: new Date().toISOString()
+        timestamp: TimezoneUtils.getTimestamp()
       };
     }
   }

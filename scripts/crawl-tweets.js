@@ -13,6 +13,7 @@ const path = require("path");
 const { storeTweetDataToSupabase } = require("../src/data/database");
 const APPLICATION_CONFIG = require("../src/lib/config.js");
 const { Logger } = require("../src/lib/utils");
+const { TimezoneUtils } = require("../src/lib/timezone");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
@@ -85,7 +86,7 @@ const RETRY_CONFIG = {
  */
 async function createBrowserWithRetry(launchOptions, retryCount = 0) {
   try {
-    console.log(`[${new Date().toISOString()}] [BROWSER-CREATE] 正在创建浏览器实例...`);
+    console.log(`[${TimezoneUtils.getTimestamp()}] [BROWSER-CREATE] 正在创建浏览器实例...`);
     Logger.info(`尝试启动浏览器 (第${retryCount + 1}次)...`);
     
     // 添加启动前等待时间，特别是在重试时
@@ -108,7 +109,7 @@ async function createBrowserWithRetry(launchOptions, retryCount = 0) {
       if (pages.length === 0) {
         await browser.newPage();
       }
-      console.log(`[${new Date().toISOString()}] [BROWSER-SUCCESS] 浏览器实例创建成功`);
+      console.log(`[${TimezoneUtils.getTimestamp()}] [BROWSER-SUCCESS] 浏览器实例创建成功`);
       Logger.info('浏览器启动成功，连接稳定');
       return browser;
     } catch (connectionError) {
@@ -209,11 +210,27 @@ async function scrapeTwitterListWithAuthentication(
   if (process.env.PROXY_HOST) {
     const host = process.env.PROXY_HOST;
     const port = process.env.PROXY_PORT || "7890";
+    const username = process.env.PROXY_USERNAME;
+    const password = process.env.PROXY_PASSWORD;
     
-    const proxyServer = `http://${host}:${port}`;
-    Logger.info(`使用代理: ${proxyServer}`);
+    let proxyServer;
+    if (username && password) {
+      // 使用用户名和密码的代理格式
+      proxyServer = `http://${username}:${password}@${host}:${port}`;
+      Logger.info(`已配置带认证的HTTP代理: ${host}:${port}`);
+    } else {
+      // 无认证代理格式
+      proxyServer = `http://${host}:${port}`;
+      Logger.info(`已配置HTTP代理: ${host}:${port}`);
+    }
     
     launchOptions.args.push(`--proxy-server=${proxyServer}`, "--ignore-certificate-errors");
+    
+    // 添加代理相关的浏览器参数
+    launchOptions.args.push('--proxy-bypass-list=<-loopback>');
+    launchOptions.args.push('--disable-web-security');
+    
+    Logger.warn('注意：代理配置可能影响网络连接，如遇问题请检查代理服务器状态');
   }
 
   Logger.info("启动浏览器...");
@@ -233,9 +250,18 @@ async function scrapeTwitterListWithAuthentication(
     throw new Error('浏览器连接不稳定');
   }
   
-  console.log(`[${new Date().toISOString()}] [PAGE-CREATE] 正在创建页面实例...`);
+  console.log(`[${new Date().toLocaleString('zh-CN', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(/\//g, '-')}] [PAGE-CREATE] 正在创建页面实例...`);
   const page = await createPageWithErrorHandling(browser);
-  console.log(`[${new Date().toISOString()}] [PAGE-SUCCESS] 页面实例创建成功`);
+  console.log(`[${TimezoneUtils.getTimestamp()}] [PAGE-SUCCESS] 页面实例创建成功`);
   
   // 页面创建后稳定性检查
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -267,9 +293,9 @@ async function scrapeTwitterListWithAuthentication(
       sameSite: "None",
     }));
 
-    console.log(`[${new Date().toISOString()}] [COOKIE-SET] 正在设置Cookie...`);
+    console.log(`[${TimezoneUtils.getTimestamp()}] [COOKIE-SET] 正在设置Cookie...`);
     await page.setCookie(...formattedCookies);
-    console.log(`[${new Date().toISOString()}] [COOKIE-SUCCESS] Cookie设置完成`);
+    console.log(`[${TimezoneUtils.getTimestamp()}] [COOKIE-SUCCESS] Cookie设置完成`);
     Logger.info("Cookies设置成功");
 
     Logger.info(`访问页面: ${targetUrl}`);

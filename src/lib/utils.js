@@ -18,6 +18,7 @@
 const { applicationConfig } = require('../reports/reportConfig');
 const fs = require('fs');
 const path = require('path');
+const { TimezoneUtils } = require('./timezone');
 
 /**
  * 应用程序日志记录工具类
@@ -93,7 +94,7 @@ class Logger {
    * @param {Object} [metadata={}] - 附加元数据
    */
   static log(logLevel, message, metadata = {}) {
-    const timestamp = new Date().toISOString();
+    const timestamp = TimezoneUtils.getTimestamp();
     const metadataStr = Object.keys(metadata).length > 0 ? ` ${JSON.stringify(metadata)}` : '';
     const logEntry = `[${timestamp}] [${logLevel}] ${message}${metadataStr}`;
     
@@ -178,8 +179,8 @@ class TimeUtils {
     );
     
     return {
-      startTime: dayStartTimestamp.toISOString(),
-      endTime: dayEndTimestamp.toISOString()
+      startTime: TimezoneUtils.formatDateTime(dayStartTimestamp),
+      endTime: TimezoneUtils.formatDateTime(dayEndTimestamp)
     };
   }
 
@@ -190,7 +191,7 @@ class TimeUtils {
    * @returns {string} 格式化后的日期字符串
    */
   static formatDateToLocalizedString(targetDate = new Date(), localeSettings = applicationConfig.business.reportLanguage) {
-    return targetDate.toLocaleDateString(localeSettings);
+    return TimezoneUtils.formatDate(targetDate);
   }
 
   /**
@@ -200,7 +201,7 @@ class TimeUtils {
    * @returns {string} 格式化后的日期时间字符串
    */
   static formatDateTimeToLocalizedString(targetDateTime = new Date(), localeSettings = applicationConfig.business.reportLanguage) {
-    return targetDateTime.toLocaleString(localeSettings);
+    return TimezoneUtils.formatDateTime(targetDateTime);
   }
 
 
@@ -294,7 +295,7 @@ class ErrorHandler {
    * @param {Object} [context={}] - 上下文信息
    */
   static logErrorWithContext(errorObject, contextInfo = '') {
-    const errorTimestamp = new Date().toISOString();
+    const errorTimestamp = TimezoneUtils.getTimestamp();
     const formattedLogMessage = `[${errorTimestamp}] ${contextInfo ? `[${contextInfo}] ` : ''}${errorObject.message}`;
     console.error(formattedLogMessage);
     if (errorObject.stack) {

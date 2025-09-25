@@ -1,4 +1,5 @@
 const Logger = require('../lib/utils').Logger;
+const { TimezoneUtils } = require('../lib/timezone');
 
 /**
  * 处理和格式化推特数据以便存储
@@ -19,9 +20,9 @@ function formatTweetDataForStorage(rawTweetData) {
         content: tweetItem.content || '',
         author: tweetItem.author || 'Unknown',
         url: tweetItem.url || '',
-        timestamp: tweetItem.timestamp || new Date().toISOString(),
+        timestamp: tweetItem.timestamp || TimezoneUtils.getTimestamp(),
         list_id: tweetItem.list_id || 'default',
-        created_at: new Date().toISOString()
+        created_at: TimezoneUtils.getTimestamp()
       };
     } catch (error) {
       Logger.error(`[推特数据处理] 格式化第 ${itemIndex + 1} 条推特数据时发生错误`, { error: error.message });

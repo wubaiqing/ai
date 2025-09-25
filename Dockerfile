@@ -17,7 +17,12 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     git \
-    bash
+    bash \
+    tzdata
+
+# 设置时区为中国时区
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
 
 # 设置Puppeteer中国镜像源以提高下载速度
 ENV PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary

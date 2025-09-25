@@ -9,6 +9,7 @@
  */
 
 const path = require('path');
+const { TimezoneUtils } = require('../lib/timezone');
 require('dotenv').config();
 
 /**
@@ -125,7 +126,7 @@ function validateEnvironmentVariables() {
  * console.log(fileConfig.outputDirectory);
  */
 function generateReportFileName() {
-  const currentDate = new Date().toISOString().split('T')[0];
+  const currentDate = TimezoneUtils.formatDate(new Date());
   return applicationConfig.reportOutput.fileNameTemplate.replace('{date}', currentDate);
 }
 
