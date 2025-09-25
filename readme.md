@@ -208,7 +208,7 @@ twitter-ai-reporter/
 │   └── data/              # 数据处理模块
 ├── tests/                  # 🧪 测试文件
 ├── logs/                   # 📝 日志文件目录
-├── reports/                # 📊 报告输出目录
+├── outputs/                # 📊 报告输出目录
 ├── docker/                 # 🐳 Docker 相关文件
 ├── .env.example           # ⚙️ 环境变量模板
 ├── docker-compose.yml     # 容器编排配置
@@ -357,7 +357,7 @@ git clone <repository-url>
 cd twitter-ai-reporter
 
 # 创建必要的目录
-mkdir -p logs reports
+mkdir -p logs outputs
 
 # 确保 cookies.json 文件存在
 touch cookies.json
@@ -441,7 +441,7 @@ docker-compose exec twitter-ai sh
 - 存储：自动清理日志，保留最近30天
 
 **数据持久化：**
-- `./reports` - 报告输出目录
+- `./outputs` - 报告输出目录
 - `./cookies.json` - 登录状态文件
 - `./logs` - 日志文件目录
 - `./.env` - 环境配置文件
@@ -683,8 +683,8 @@ docker compose up -d
 解决步骤：
 ```bash
 # 设置正确的文件权限
-sudo chown -R 1000:1000 logs reports cookies.json
-sudo chmod -R 755 logs reports
+sudo chown -R 1000:1000 logs outputs cookies.json
+sudo chmod -R 755 logs outputs
 sudo chmod 644 cookies.json
 ```
 
@@ -730,7 +730,7 @@ ps aux | grep node
 
 # 检查磁盘使用
 df -h
-du -sh logs/ reports/
+du -sh logs/ outputs/
 ```
 
 #### 网络诊断
