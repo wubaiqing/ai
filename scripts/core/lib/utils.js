@@ -16,9 +16,11 @@
  */
 
 const { applicationConfig } = require('../reports/reportConfig');
+
+// 时区工具
+const { TimezoneUtils } = require('./timezone');
 const fs = require('fs');
 const path = require('path');
-const { TimezoneUtils } = require('./timezone');
 
 /**
  * 应用程序日志记录工具类
@@ -31,7 +33,7 @@ class Logger {
    * @returns {string} 日志文件路径
    */
   static getLogFilePath(date = new Date()) {
-    const projectRoot = path.resolve(__dirname, '../..');
+    const projectRoot = path.resolve(__dirname, '../../..');
     const logsDir = path.join(projectRoot, 'logs');
     
     // 确保logs目录存在
@@ -62,7 +64,7 @@ class Logger {
    */
   static cleanupOldLogs(daysToKeep = 30) {
     try {
-      const projectRoot = path.resolve(__dirname, '../..');
+      const projectRoot = path.resolve(__dirname, '../../..');
       const logsDir = path.join(projectRoot, 'logs');
       
       if (!fs.existsSync(logsDir)) return;

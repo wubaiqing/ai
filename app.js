@@ -8,7 +8,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const { TimezoneUtils } = require('./src/lib/timezone');
+const { TimezoneUtils } = require('./scripts/core/lib/timezone');
 
 // 日志函数
 function log(level, message, tag = 'APP') {
@@ -240,7 +240,7 @@ function main() {
     log('INFO', 'Executing initial crawl task on startup...');
     
     // 直接调用爬取函数，不使用外部脚本
-    const { scrapeTwitterListWithAuthentication } = require('./scripts/crawl-tweets');
+    const { scrapeTwitterListWithAuthentication } = require('./scripts/tasks/crawl-tweets');
     const defaultListId = "1950374938378113192";
     const testScrollCount = 500;
     

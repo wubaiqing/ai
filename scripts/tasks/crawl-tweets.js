@@ -10,10 +10,10 @@ require("dotenv").config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
-const { storeTweetDataToSupabase } = require("../src/data/database");
-const APPLICATION_CONFIG = require("../src/lib/config.js");
-const { Logger } = require("../src/lib/utils");
-const { TimezoneUtils } = require("../src/lib/timezone");
+const { storeTweetDataToSupabase } = require("../core/data/database");
+const APPLICATION_CONFIG = require("../core/lib/config.js");
+const { Logger } = require("../core/lib/utils");
+const { TimezoneUtils } = require("../core/lib/timezone");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
@@ -278,7 +278,7 @@ async function scrapeTwitterListWithAuthentication(
     await page.setRequestInterception(true);
     page.on("request", (request) => request.continue());
 
-    const cookiesFilePath = path.resolve(__dirname, CONFIG.COOKIES_FILE_PATH);
+    const cookiesFilePath = CONFIG.COOKIES_FILE_PATH;
     if (!fs.existsSync(cookiesFilePath)) {
       throw new Error("未找到 cookies.json，请先导出 X 登录 cookie");
     }

@@ -5,11 +5,11 @@
  * @requires ./src/lib/config
  */
 
-const { aiReportGenerator } = require('../src/reports/reportGenerator');
-const { applicationConfig, validateEnvironmentVariables } = require('../src/reports/reportConfig');
-const { Logger, ErrorHandler } = require('../src/lib/utils');
-const { TimezoneUtils } = require('../src/lib/timezone');
-const { closeAllConnections } = require('../src/data/database');
+const { aiReportGenerator } = require('../core/reports/reportGenerator');
+const { applicationConfig, validateEnvironmentVariables } = require('../core/reports/reportConfig');
+const { Logger, ErrorHandler } = require('../core/lib/utils');
+const { TimezoneUtils } = require('../core/lib/timezone');
+const { closeAllConnections } = require('../core/data/database');
 
 /**
  * 执行AI科技简报生成任务

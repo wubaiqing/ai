@@ -4,7 +4,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const config = require('../src/lib/config');
+const config = require('../core/lib/config');
 
 describe('Supabase数据库连接测试', () => {
     let supabase;

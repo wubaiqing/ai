@@ -11,9 +11,9 @@ require("dotenv").config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
-const APPLICATION_CONFIG = require("../src/lib/config");
-const { Logger } = require("../src/lib/utils");
-const { TimezoneUtils } = require("../src/lib/timezone");
+const APPLICATION_CONFIG = require("../core/lib/config");
+const { Logger } = require("../core/lib/utils");
+const { TimezoneUtils } = require("../core/lib/timezone");
 
 // 应用程序配置常量
 const CONFIG = {
@@ -328,10 +328,7 @@ async function authenticateAndSaveCookies(
 
       // 将cookies数据保存到本地文件
       Logger.info("正在保存cookies数据到本地文件...");
-      const cookiesStoragePath = path.resolve(
-        __dirname,
-        CONFIG.COOKIES_FILE_PATH
-      );
+      const cookiesStoragePath = CONFIG.COOKIES_FILE_PATH;
       fs.writeFileSync(
         cookiesStoragePath,
         JSON.stringify(authenticationCookies, null, 2)
@@ -393,10 +390,7 @@ async function authenticateFromEnvironmentVariables() {
  * @returns {boolean} Cookie是否存在且有效
  */
 function checkAuthenticationCookiesExist() {
-  const cookiesStoragePath = path.resolve(
-    __dirname,
-    CONFIG.COOKIES_FILE_PATH
-  );
+  const cookiesStoragePath = CONFIG.COOKIES_FILE_PATH;
 
   if (!fs.existsSync(cookiesStoragePath)) {
     Logger.info("[检查] cookies.json 文件不存在");

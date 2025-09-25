@@ -5,6 +5,7 @@
  */
 
 require('dotenv').config();
+const path = require('path');
 const Logger = require('./utils').Logger;
 
 /**
@@ -60,7 +61,7 @@ class ApplicationConfiguration {
       username: process.env.X_USERNAME,
       password: process.env.X_PASSWORD,
       email: process.env.X_EMAIL,
-      cookiesFilePath: process.env.COOKIES_FILE || 'cookies.json'
+      cookiesFilePath: process.env.COOKIES_FILE || path.resolve(__dirname, '..', '..', '..', 'cookies.json')
     };
     
     // 不记录敏感信息，只记录配置状态

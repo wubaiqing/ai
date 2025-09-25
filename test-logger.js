@@ -1,5 +1,5 @@
-const { Logger } = require('./src/lib/utils');
-const { applicationConfig } = require('./src/reports/reportConfig');
+const { Logger } = require('./scripts/core/lib/utils');
+const { applicationConfig } = require('./scripts/core/reports/reportConfig');
 const path = require('path');
 const fs = require('fs');
 

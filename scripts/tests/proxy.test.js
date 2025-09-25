@@ -13,7 +13,7 @@ const path = require('path');
 const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { HttpProxyAgent } = require('http-proxy-agent');
-const Logger = require('../src/lib/utils').Logger;
+const Logger = require('../core/lib/utils').Logger;
 
 // IP检测服务列表
 const IP_SERVICES = [
@@ -111,7 +111,7 @@ describe('代理服务器测试套件', () => {
     envBackup = { ...process.env };
     
     // 加载.env文件
-    const envPath = path.join(__dirname, '..', '.env');
+    const envPath = path.join(__dirname, '..', '..', '.env');
     if (fs.existsSync(envPath)) {
       require('dotenv').config({ path: envPath });
     }
@@ -125,7 +125,7 @@ describe('代理服务器测试套件', () => {
   
   describe('代理配置检查', () => {
     test('应该存在.env文件', () => {
-      const envPath = path.join(__dirname, '..', '.env');
+      const envPath = path.join(__dirname, '..', '..', '.env');
       expect(fs.existsSync(envPath)).toBe(true);
     });
     
@@ -215,7 +215,7 @@ describe('代理服务器测试套件', () => {
   describe('综合代理测试', () => {
     test('完整的代理功能测试', async () => {
       // 1. 检查配置
-      const envPath = path.join(__dirname, '..', '.env');
+      const envPath = path.join(__dirname, '..', '..', '.env');
       const configValid = fs.existsSync(envPath) && 
                          !!process.env.PROXY_HOST && 
                          !!process.env.PROXY_PORT;

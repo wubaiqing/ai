@@ -3,10 +3,10 @@
  * 验证Supabase免费版200连接限制的解决方案
  */
 
-const { connectionManager } = require('../src/data/connectionManager');
-const { storeTweetDataToSupabase, retrieveTweetDataFromSupabase, getConnectionStats } = require('../src/data/database');
-const Logger = require('../src/lib/utils').Logger;
-const { TimezoneUtils } = require('../src/lib/timezone');
+const { connectionManager } = require('../core/data/connectionManager');
+const { storeTweetDataToSupabase, retrieveTweetDataFromSupabase, getConnectionStats } = require('../core/data/database');
+const Logger = require('../core/lib/utils').Logger;
+const { TimezoneUtils } = require('../core/lib/timezone');
 
 /**
  * 生成测试推文数据

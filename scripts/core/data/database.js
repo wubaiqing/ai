@@ -4,8 +4,8 @@
  * 使用连接管理器解决免费版200连接限制问题
  */
 
-const { connectionManager } = require('./connectionManager');
 const Logger = require('../lib/utils').Logger;
+const { connectionManager } = require('./connectionManager');
 const { createClient } = require('@supabase/supabase-js');
 
 // 初始化 Supabase 客户端
