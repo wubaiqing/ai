@@ -203,7 +203,7 @@ function main() {
     log('INFO', 'Twitter AI Reporter Service Starting...');
     
     // 确保必要的目录存在
-    const dirs = ['logs', 'outputs'];
+    const dirs = ['logs'];
     dirs.forEach(dir => {
         const dirPath = path.join(__dirname, dir);
         try {

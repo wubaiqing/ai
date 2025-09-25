@@ -182,6 +182,9 @@ class FileOperationService {
       
       Logger.info(`报告文件保存成功: ${reportFilePath}`);
       
+      // 生成并保存文件列表 JSON
+      await this.generateAndSaveFileListJson();
+      
       return reportFilePath;
     } catch (fileSaveError) {
       Logger.error('保存报告文件失败', { error: fileSaveError.message });
@@ -281,7 +284,7 @@ class FileOperationService {
       Logger.info(`获取报告目录文件列表: ${this.reportDirectory}`);
       
       // 确保目录存在
-      await this.ensureDirectoryExists();
+      await this.ensureReportOutputDirectoryExists();
       
       const directoryFiles = await fs.readdir(this.reportDirectory);
       
@@ -441,6 +444,82 @@ class FileOperationService {
       );
     }
   }
+
+  /**
+   * 生成并保存文件列表 JSON
+   * 
+   * 扫描报告目录，生成包含所有文件信息的 JSON 文件
+   * 
+   * @async
+   * @method generateAndSaveFileListJson
+   * @returns {Promise<void>}
+   * @throws {Error} 当生成 JSON 文件失败时抛出错误
+   */
+  async generateAndSaveFileListJson() {
+    try {
+      Logger.info('开始生成文件列表 JSON...');
+      
+      const reportFiles = await this.getReportFilesList();
+      const fileList = [];
+      
+      for (const fileInfo of reportFiles) {
+        try {
+          const fileStats = await fs.stat(fileInfo.fullPath);
+          
+          // 读取文件内容以提取标题
+          let title = fileInfo.baseName;
+          try {
+            const content = await fs.readFile(fileInfo.fullPath, this.encoding);
+            const titleMatch = content.match(/^#\s+(.+)$/m);
+            if (titleMatch) {
+              title = titleMatch[1].trim();
+            }
+          } catch (contentReadError) {
+            Logger.warn(`无法读取文件 ${fileInfo.fileName} 的标题: ${contentReadError.message}`);
+          }
+          
+          fileList.push({
+            filename: fileInfo.fileName,
+            title: title,
+            date: fileStats.mtime.toISOString().split('T')[0],
+            path: `/outputs/${fileInfo.fileName}`,
+            size: fileStats.size,
+            lastModified: fileStats.mtime.toISOString(),
+            slug: fileInfo.baseName
+          });
+        } catch (fileStatsError) {
+          Logger.warn(`无法获取文件 ${fileInfo.fileName} 的统计信息: ${fileStatsError.message}`);
+        }
+      }
+      
+      // 按日期排序（最新的在前）
+      fileList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      const jsonContent = JSON.stringify({
+        lastUpdated: new Date().toISOString(),
+        totalFiles: fileList.length,
+        files: fileList
+      }, null, 2);
+      
+      const frontendOutputsDir = path.join(__dirname, '../../../frontend/public/outputs');
+      await fs.mkdir(frontendOutputsDir, { recursive: true });
+      const jsonFilePath = path.join(frontendOutputsDir, 'file-list.json');
+      await fs.writeFile(jsonFilePath, jsonContent, this.encoding);
+      
+      Logger.info(`文件列表 JSON 已保存到: ${jsonFilePath}`);
+      
+      // JSON 文件已直接保存到前端目录，无需复制
+    } catch (error) {
+      Logger.error('生成文件列表 JSON 失败', { error: error.message });
+      throw ErrorHandler.createStandardizedError(
+        `生成文件列表 JSON 失败: ${error.message}`,
+        'JSON_GENERATION_ERROR',
+        error
+      );
+    }
+  }
+
+
 }
 
 // 创建单例实例

@@ -6,7 +6,7 @@
 echo "[$(date "+%Y-%m-%d %H:%M:%S")] [START] Starting Twitter AI Reporter Service..."
 
 # 创建必要的目录
-mkdir -p logs outputs
+mkdir -p logs
 
 # 启动Node.js服务
 echo "[$(date "+%Y-%m-%d %H:%M:%S")] [START] Launching Node.js service..."

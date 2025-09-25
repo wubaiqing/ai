@@ -38,8 +38,6 @@ coverage/
 
 # Vercel
 .vercel
-
-outputs/*.md
 cookies.json
 
 # Supabase migrations (if not needed in repo)

@@ -45,9 +45,9 @@ const applicationConfig = {
     temperature: 0.7
   },
 
-  // 报告输出配置 - 报告文件保存到项目根目录的 outputs/ 目录
+  // 报告输出配置 - 报告文件保存到前端 public/outputs/ 目录
   output: {
-    baseDirectory: path.join(__dirname, '..', '..', '..', 'outputs'), // 项目根目录/outputs/
+    baseDirectory: path.join(__dirname, '..', '..', '..', 'frontend', 'public', 'outputs'), // frontend/public/outputs/
     fileNameTemplate: '{date}-ai-tech-brief.md',
     encoding: 'utf8'
   },

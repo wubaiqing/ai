@@ -66,6 +66,32 @@ function generateSlug(filename: string): string {
 // 获取所有文章列表
 export async function getArticles(): Promise<ArticleListItem[]> {
   try {
+    // 优先尝试读取 JSON 文件列表
+    try {
+      const jsonResponse = await fetch('/outputs/file-list.json');
+      if (jsonResponse.ok) {
+        const fileList = await jsonResponse.json();
+        console.log('使用 JSON 文件列表获取文章');
+        
+        // 直接使用 JSON 文件中的元数据，无需重新解析每个文件
+        const articles: ArticleListItem[] = fileList.files.map((file: any) => ({
+          slug: file.slug,
+          title: file.title,
+          date: file.date,
+          author: file.author || 'AI Reporter',
+          summary: file.summary || '',
+          tags: file.tags || []
+        }));
+        
+        return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      }
+    } catch (jsonError) {
+      console.warn('无法读取 JSON 文件列表，使用传统方式:', jsonError);
+    }
+    
+    // 如果 JSON 文件不存在或读取失败，使用传统方式（向后兼容）
+    console.log('使用传统方式获取文章列表');
+    
     // 获取 outputs 目录下的所有 markdown 文件
     const response = await fetch('/outputs/');
     if (!response.ok) {

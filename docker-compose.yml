@@ -25,7 +25,7 @@ services:
       - /app/node_modules
       
       # 报告输出目录同步
-      - ./outputs:/app/outputs
+
 
       # 日志目录同步
       - ./logs:/app/logs

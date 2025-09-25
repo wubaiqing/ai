@@ -12,10 +12,9 @@ export default defineConfig({
       allow: ['..'],
     },
   },
-  // 配置静态资源别名，使前端可以访问 outputs 目录
   resolve: {
     alias: {
-      '@outputs': path.resolve(__dirname, '../outputs'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
 })

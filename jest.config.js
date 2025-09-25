@@ -19,7 +19,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/logs/',
-    '/outputs/',
+
     '/supabase/'
   ],
   
@@ -32,7 +32,7 @@ module.exports = {
     '!scripts/**/*.spec.js',
     '!**/node_modules/**',
     '!**/logs/**',
-    '!**/outputs/**'
+
   ],
   
   // 覆盖率报告格式

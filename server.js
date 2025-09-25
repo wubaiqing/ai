@@ -6,7 +6,7 @@ const cors = require('cors');
 
 const app = express();
 const PORT = 3001;
-const OUTPUTS_DIR = path.join(__dirname, 'outputs');
+const OUTPUTS_DIR = path.join(__dirname, 'frontend', 'public', 'outputs');
 
 // 中间件
 app.use(cors());
