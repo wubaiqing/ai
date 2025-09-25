@@ -1,11 +1,11 @@
 version: "3.8"
 
 services:
-  twitter-ai-reporter:
+  ai-tech-brief:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: twitter-ai-reporter-app
+    container_name: ai-tech-brief-app
     restart: unless-stopped
 
     # 环境变量配置
@@ -32,7 +32,7 @@ services:
 
     # 网络配置
     networks:
-      - twitter-ai-reporter-network
+      - ai-tech-brief-network
 
     # 资源限制（适配群辉NAS）
     deploy:
@@ -51,10 +51,10 @@ services:
 
     # 标签
     labels:
-      - "com.docker.compose.project=twitter-ai-reporter"
-      - "description=Twitter AI智能分析和报告生成系统"
+      - "com.docker.compose.project=ai-tech-brief"
+      - "description=AI技术简报生成系统"
 
 networks:
-  twitter-ai-reporter-network:
+  ai-tech-brief-network:
     driver: bridge
-    name: twitter-ai-reporter-network
+    name: ai-tech-brief-network
