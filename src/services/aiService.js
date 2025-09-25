@@ -109,7 +109,7 @@ class AIContentService {
         );
       }
 
-      // 配置代理（如果存在）
+      // 基础HTTP客户端配置（不包含代理）
       const axiosConfig = {
         baseURL: baseUrl,
         timeout: requestTimeout,
@@ -118,34 +118,6 @@ class AIContentService {
           'Content-Type': 'application/json'
         }
       };
-
-      // 添加代理支持
-      if (process.env.PROXY_HOST && process.env.PROXY_PORT) {
-        let proxyUrl;
-        if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
-          // 使用带认证的代理
-          proxyUrl = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-        } else {
-          // 使用无认证代理
-          proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-        }
-        
-        const isHttps = baseUrl.startsWith('https');
-        axiosConfig.httpsAgent = isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl);
-        axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
-        
-        Logger.info('AI服务已配置代理', { 
-           proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
-           isHttps: isHttps,
-           hasAuth: !!(process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD)
-         });
-         
-         // 添加代理连接测试
-         axiosConfig.validateStatus = function (status) {
-           // 接受200-299范围的状态码，以及502（代理错误）用于诊断
-           return (status >= 200 && status < 300) || status === 502;
-         };
-      }
 
       // 配置HTTP客户端
       this.httpClient = axios.create(axiosConfig);
@@ -170,6 +142,88 @@ class AIContentService {
     if (!this.isConfigured || !this.httpClient) {
       this.initializeService();
     }
+  }
+
+  /**
+   * 判断URL是否需要使用代理
+   * 只有访问x.com相关的URL才需要使用代理
+   * @param {string} url - 要检查的URL
+   * @returns {boolean} 是否需要使用代理
+   * @private
+   */
+  shouldUseProxy(url) {
+    if (!url) return false;
+    
+    // 只有访问x.com（Twitter）相关的URL才使用代理
+    const xComDomains = [
+      'x.com',
+      'www.x.com',
+      'api.x.com',
+      'twitter.com',
+      'www.twitter.com',
+      'api.twitter.com'
+    ];
+    
+    try {
+      const urlObj = new URL(url);
+      return xComDomains.some(domain => 
+        urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain)
+      );
+    } catch (error) {
+      // 如果URL解析失败，默认不使用代理
+      Logger.warn('URL解析失败，不使用代理', { url, error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * 创建带代理配置的HTTP客户端
+   * @param {string} targetUrl - 目标URL
+   * @returns {Object} 配置好的axios实例
+   * @private
+   */
+  createHttpClientWithProxy(targetUrl) {
+    const { baseUrl, requestTimeout, apiKey } = applicationConfig.aiService;
+    
+    const axiosConfig = {
+      baseURL: baseUrl,
+      timeout: requestTimeout,
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    };
+
+    // 只有访问x.com相关URL时才添加代理配置
+    if (this.shouldUseProxy(targetUrl) && process.env.PROXY_HOST && process.env.PROXY_PORT) {
+      let proxyUrl;
+      if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+        // 使用带认证的代理
+        proxyUrl = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+      } else {
+        // 使用无认证代理
+        proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+      }
+      
+      const isHttps = targetUrl.startsWith('https');
+      axiosConfig.httpsAgent = isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl);
+      axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
+      
+      Logger.info('为x.com请求配置代理', { 
+        targetUrl,
+        proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
+        isHttps: isHttps,
+        hasAuth: !!(process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD)
+      });
+      
+      // 添加代理连接测试
+      axiosConfig.validateStatus = function (status) {
+        // 接受200-299范围的状态码，以及502（代理错误）用于诊断
+        return (status >= 200 && status < 300) || status === 502;
+      };
+    }
+
+    return axios.create(axiosConfig);
   }
 
   /**
@@ -242,6 +296,7 @@ class AIContentService {
    * 发送API请求到AI服务（带重试机制）
    * 
    * 处理与AI服务的HTTP通信，包括请求构建、发送和响应处理
+   * 根据目标URL动态决定是否使用代理（只有x.com相关URL使用代理）
    * 
    * @private
    * @async
@@ -263,7 +318,23 @@ class AIContentService {
    */
   async makeAPIRequest(requestPayload, retryCount = 0) {
     try {
-      const response = await this.httpClient.post('', requestPayload);
+      // 获取目标URL用于判断是否需要代理
+      const { baseUrl } = applicationConfig.aiService;
+      const targetUrl = baseUrl;
+      
+      // 根据目标URL动态选择HTTP客户端（是否使用代理）
+      let httpClient;
+      if (this.shouldUseProxy(targetUrl)) {
+        // 为x.com相关请求创建带代理的客户端
+        httpClient = this.createHttpClientWithProxy(targetUrl);
+        Logger.info('使用代理发送请求', { targetUrl });
+      } else {
+        // 使用默认的无代理客户端
+        httpClient = this.httpClient;
+        Logger.info('直接发送请求（不使用代理）', { targetUrl });
+      }
+      
+      const response = await httpClient.post('', requestPayload);
       return response.data;
     } catch (error) {
       // 详细的错误诊断信息
