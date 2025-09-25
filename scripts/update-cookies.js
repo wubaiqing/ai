@@ -109,6 +109,17 @@ async function createPageWithErrorHandling(browser) {
     page.setDefaultTimeout(CONFIG.PAGE_TIMEOUT);
     page.setDefaultNavigationTimeout(CONFIG.PAGE_TIMEOUT);
     
+    // 配置代理认证（如果环境变量中存在）
+    if (process.env.PROXY_HOST && process.env.PROXY_PORT && 
+        process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+      Logger.info("配置代理认证...");
+      await page.authenticate({
+        username: process.env.PROXY_USERNAME,
+        password: process.env.PROXY_PASSWORD
+      });
+      Logger.info("代理认证配置完成");
+    }
+    
     // 监听页面错误
     page.on("error", (error) => {
       Logger.error(`页面运行时错误: ${error.message}`);
@@ -202,18 +213,12 @@ async function authenticateAndSaveCookies(
       waitForInitialPage: false,
     };
 
-    // 配置HTTP代理（如果环境变量中存在）
+    // HTTP代理将通过 page.authenticate() 方法配置
     if (process.env.PROXY_HOST && process.env.PROXY_PORT) {
-      let proxyServer;
-      if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
-        // 使用带认证的代理
-        proxyServer = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-      } else {
-        // 使用无认证代理
-        proxyServer = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-      }
+      // 配置代理服务器（不包含认证信息）
+      const proxyServer = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
       launchOptions.args.push(`--proxy-server=${proxyServer}`);
-      Logger.info(`已配置HTTP代理: ${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`);
+      Logger.info(`已配置HTTP代理服务器: ${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`);
     }
 
     browserInstance = await createBrowser(launchOptions);

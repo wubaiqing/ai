@@ -7,7 +7,7 @@
     "start": "node scripts/crawl-tweets.js",
     "update-cookies": "node scripts/update-cookies.js",
     "generate-report": "node scripts/generate-report.js",
-    "test-proxy": "node tests/testProxy.js",
+    "test-proxy": "node tests/proxy-utils.test.js",
     "serve": "node app.js",
     "dev": "node app.js",
     "test": "jest",

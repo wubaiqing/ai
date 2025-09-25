@@ -170,6 +170,15 @@ async function createPageWithErrorHandling(browser) {
   page.setDefaultTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
   page.setDefaultNavigationTimeout(RETRY_CONFIG.PAGE_TIMEOUT);
   
+  // 配置代理认证
+  if (process.env.PROXY_HOST && process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+    await page.authenticate({
+      username: process.env.PROXY_USERNAME,
+      password: process.env.PROXY_PASSWORD
+    });
+    Logger.info('代理认证配置完成');
+  }
+  
   return page;
 }
 
@@ -210,26 +219,16 @@ async function scrapeTwitterListWithAuthentication(
   if (process.env.PROXY_HOST) {
     const host = process.env.PROXY_HOST;
     const port = process.env.PROXY_PORT || "7890";
-    const username = process.env.PROXY_USERNAME;
-    const password = process.env.PROXY_PASSWORD;
     
-    let proxyServer;
-    if (username && password) {
-      // 使用用户名和密码的代理格式
-      proxyServer = `http://${username}:${password}@${host}:${port}`;
-      Logger.info(`已配置带认证的HTTP代理: ${host}:${port}`);
-    } else {
-      // 无认证代理格式
-      proxyServer = `http://${host}:${port}`;
-      Logger.info(`已配置HTTP代理: ${host}:${port}`);
-    }
-    
+    // 配置代理服务器（不包含认证信息）
+    const proxyServer = `http://${host}:${port}`;
     launchOptions.args.push(`--proxy-server=${proxyServer}`, "--ignore-certificate-errors");
     
     // 添加代理相关的浏览器参数
     launchOptions.args.push('--proxy-bypass-list=<-loopback>');
     launchOptions.args.push('--disable-web-security');
     
+    Logger.info(`已配置HTTP代理: ${host}:${port}`);
     Logger.warn('注意：代理配置可能影响网络连接，如遇问题请检查代理服务器状态');
   }
 
