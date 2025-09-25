@@ -359,6 +359,8 @@ async function authenticateAndSaveCookies(
     return false;
   } finally {
     await closeBrowserSafely(browserInstance);
+    // 确保浏览器完全关闭后再继续
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
 
@@ -428,38 +430,52 @@ async function executeAuthenticationProcess() {
   );
   Logger.info("[启动] Twitter/X.com 自动登录认证脚本");
 
-  // 检查是否已存在有效的认证cookies
-  if (checkAuthenticationCookiesExist()) {
-    console.log(
-      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-SKIP] 已存在有效cookies文件`
-    );
-    Logger.info(
-      "[提示] 已存在有效cookies文件，如需重新登录请删除 cookies.json 文件"
-    );
-    process.exit(0);
-  }
+  try {
+    // 检查是否已存在有效的认证cookies
+    if (checkAuthenticationCookiesExist()) {
+      console.log(
+        `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-SKIP] 已存在有效cookies文件`
+      );
+      Logger.info(
+        "[提示] 已存在有效cookies文件，如需重新登录请删除 cookies.json 文件"
+      );
+      process.exit(0);
+    }
 
-  // 执行用户登录认证流程
-  const authenticationSuccess = await authenticateFromEnvironmentVariables();
+    // 执行用户登录认证流程
+    const authenticationSuccess = await authenticateFromEnvironmentVariables();
 
-  if (authenticationSuccess) {
-    console.log(
-      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-SUCCESS] 用户登录认证成功，cookies数据已保存`
-    );
-    Logger.info("[完成] 用户登录认证成功，cookies数据已保存");
-    process.exit(0);
-  } else {
+    if (authenticationSuccess) {
+      console.log(
+        `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-SUCCESS] 用户登录认证成功，cookies数据已保存`
+      );
+      Logger.info("[完成] 用户登录认证成功，cookies数据已保存");
+      process.exit(0);
+    } else {
+      console.error(
+        `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-ERROR] 用户登录认证失败`
+      );
+      Logger.error("[失败] 用户登录认证失败");
+      process.exit(1);
+    }
+  } catch (error) {
     console.error(
-      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-ERROR] 用户登录认证失败`
+      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-ERROR] 认证过程异常: ${error.message}`
     );
-    Logger.error("[失败] 用户登录认证失败");
+    Logger.error("[异常] 认证过程发生异常:", { error: error.message });
     process.exit(1);
   }
 }
 
 // 如果直接运行此文件，则执行主认证流程
 if (require.main === module) {
-  executeAuthenticationProcess();
+  executeAuthenticationProcess().catch(error => {
+    console.error(
+      `[${TimezoneUtils.getTimestamp()}] [COOKIE-UPDATE-ERROR] 脚本执行失败: ${error.message}`
+    );
+    Logger.error("[失败] 脚本执行失败:", { error: error.message });
+    process.exit(1);
+  });
 }
 
 // 导出函数供其他模块使用

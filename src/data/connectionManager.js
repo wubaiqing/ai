@@ -21,6 +21,7 @@ class DatabaseConnectionManager {
     this.idleTimeout = 60000; // 空闲连接超时时间（60秒）
     this.retryAttempts = 3; // 重试次数
     this.retryDelay = 1000; // 重试延迟（毫秒）
+    this.cleanupTimer = null; // 清理定时器引用
     
     // 统计信息
     this.stats = {
@@ -220,7 +221,7 @@ class DatabaseConnectionManager {
    * 启动空闲连接清理任务
    */
   startIdleConnectionCleanup() {
-    setInterval(() => {
+    this.cleanupTimer = setInterval(() => {
       this.cleanupIdleConnections();
     }, 30000); // 每30秒清理一次
   }
@@ -312,6 +313,13 @@ class DatabaseConnectionManager {
    */
   async closeAllConnections() {
     Logger.info('[连接管理] 开始关闭所有连接');
+    
+    // 清理定时器
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+      Logger.info('[连接管理] 清理定时器已停止');
+    }
     
     this.connectionPool.clear();
     this.activeConnections.clear();

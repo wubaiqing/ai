@@ -9,6 +9,7 @@ const { aiReportGenerator } = require('../src/reports/reportGenerator');
 const { applicationConfig, validateEnvironmentVariables } = require('../src/reports/reportConfig');
 const { Logger, ErrorHandler } = require('../src/lib/utils');
 const { TimezoneUtils } = require('../src/lib/timezone');
+const { closeAllConnections } = require('../src/data/database');
 
 /**
  * 执行AI科技简报生成任务
@@ -42,10 +43,15 @@ async function executeAIReportGeneration(options = {}) {
         Logger.info(generationResult.reportContent);
         Logger.info('=== 简报内容结束 ===\n');
       }
+      
+      // 关闭数据库连接并退出进程
+      await closeAllConnections();
+      process.exit(0);
     } else {
 
       console.error(`[${TimezoneUtils.getTimestamp()}] [REPORT-ERROR] AI简报生成失败: ${generationResult.error}`);
       Logger.error('\n❌ AI简报生成失败:', { error: generationResult.error });
+      await closeAllConnections();
       process.exit(1);
     }
     
@@ -58,6 +64,7 @@ async function executeAIReportGeneration(options = {}) {
       executionTimeMs: totalExecutionTime
     });
     Logger.error('\n❌ AI简报生成失败:', { error: error.message });
+    await closeAllConnections();
     process.exit(1);
   }
 }
@@ -95,11 +102,13 @@ async function initializeApplication() {
   // 处理命令行参数
   if (commandLineArguments.includes('-h') || commandLineArguments.includes('--help')) {
     displayApplicationHelp();
+    process.exit(0);
     return;
   }
   
   if (commandLineArguments.includes('-v') || commandLineArguments.includes('--version')) {
     Logger.info('AI简报生成器 v1.0.0');
+    process.exit(0);
     return;
   }
   
@@ -112,8 +121,9 @@ async function initializeApplication() {
 
 // 如果直接运行此文件，则执行主程序
 if (require.main === module) {
-  initializeApplication().catch(error => {
+  initializeApplication().catch(async error => {
     Logger.error('程序执行失败:', { error: error.message });
+    await closeAllConnections();
     process.exit(1);
   });
 }
