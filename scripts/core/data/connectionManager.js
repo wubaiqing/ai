@@ -33,8 +33,10 @@ class DatabaseConnectionManager {
       connectionReuses: 0
     };
     
-    // 定期清理空闲连接
-    this.startIdleConnectionCleanup();
+    // 在非测试环境中启动定期清理空闲连接
+    if (process.env.NODE_ENV !== 'test') {
+      this.startIdleConnectionCleanup();
+    }
   }
 
   /**

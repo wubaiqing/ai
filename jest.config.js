@@ -66,7 +66,7 @@ module.exports = {
   setupFilesAfterEnv: [],
   
   // 模块路径映射
-  moduleNameMapping: {},
+  moduleNameMapper: {},
   
   // 清除模拟
   clearMocks: true,
