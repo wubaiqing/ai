@@ -40,14 +40,7 @@ const ArticleDetail: React.FC = () => {
     fetchArticle();
   }, [slug]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+
 
   if (loading) {
     return (
@@ -120,43 +113,7 @@ const ArticleDetail: React.FC = () => {
           Back to News
         </Link>
 
-        {/* Article Header */}
-        <header className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-            {article.title}
-          </h1>
-          
-          <div className="flex flex-wrap items-center text-gray-600 mb-6">
-            <time dateTime={article.date} className="text-sm">
-              {formatDate(article.date)}
-            </time>
-            {article.author && (
-              <>
-                <span className="mx-2 text-sm">•</span>
-                <span className="text-sm">{article.author}</span>
-              </>
-            )}
-          </div>
 
-          {article.summary && (
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              {article.summary}
-            </p>
-          )}
-
-          {article.tags && article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {article.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </header>
 
         {/* Article Content */}
         <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">

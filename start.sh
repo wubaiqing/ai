@@ -1,13 +1,15 @@
-#!/bin/sh
-
-# Twitter AI Reporter - 简化启动脚本
-# 直接启动Node.js长期服务，不再使用cron
-
-echo "[$(date "+%Y-%m-%d %H:%M:%S")] [START] Starting Twitter AI Reporter Service..."
+#!/bin/bash
 
 # 创建必要的目录
-mkdir -p logs
+mkdir -p logs outputs
 
-# 启动Node.js服务
-echo "[$(date "+%Y-%m-%d %H:%M:%S")] [START] Launching Node.js service..."
-exec node app.js
+# 启动 nginx
+echo "Starting nginx..."
+nginx -g "daemon off;" &
+
+# 等待一下让 nginx 启动
+sleep 2
+
+# 启动 Node.js 应用
+echo "Starting Node.js application..."
+node app.js

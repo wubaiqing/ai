@@ -1,60 +1,52 @@
-version: "3.8"
+version: '3.8'
 
 services:
   ai-tech-brief:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ai-tech-brief-app
+    container_name: ai-tech-brief
     restart: unless-stopped
-
-    # 环境变量配置
+    ports:
+      - "3000:80"
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
-
-    # 环境变量文件
-    env_file:
-      - .env
-
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
     volumes:
-      # 项目代码目录挂载（开发模式）
-      - .:/app
-      
-      # 排除node_modules避免冲突
-      - /app/node_modules
-      
-      # 报告输出目录同步
-
-
-      # 日志目录同步
+      # 挂载日志目录到宿主机
       - ./logs:/app/logs
-
-    # 网络配置
+      # 挂载 outputs 目录到宿主机（映射到前端 public 目录）
+      - ./frontend/public/outputs:/app/outputs
+      # 挂载环境变量文件（如果存在）
+      - ./.env:/app/.env:ro
     networks:
       - ai-tech-brief-network
-
-    # 资源限制（适配群辉NAS）
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
+          cpus: '1.0'
         reservations:
           memory: 512M
-
-    # 安全配置
+          cpus: '0.5'
     security_opt:
       - no-new-privileges:true
-
-    # 工作目录
     working_dir: /app
-
-    # 标签
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     labels:
       - "com.docker.compose.project=ai-tech-brief"
-      - "description=AI技术简报生成系统"
+      - "com.docker.compose.service=ai-tech-brief"
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai-tech-brief.rule=Host(`localhost`)"
+      - "traefik.http.services.ai-tech-brief.loadbalancer.server.port=80"
 
 networks:
   ai-tech-brief-network:
     driver: bridge
-    name: ai-tech-brief-network

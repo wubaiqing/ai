@@ -1,19 +1,44 @@
 import { Article, ArticleMetadata, ArticleListItem } from '../types/article';
 
 // 解析 markdown 文件的 frontmatter
-function parseFrontmatter(content: string): { metadata: ArticleMetadata; body: string } {
+function parseFrontmatter(content: string, filename?: string): { metadata: ArticleMetadata; body: string } {
   const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
   const match = content.match(frontmatterRegex);
   
   if (!match) {
-    // 如果没有 frontmatter，返回默认值
+    // 如果没有 frontmatter，从内容中智能提取信息
+    let title = 'AI科技简报';
+    let date = new Date().toISOString().split('T')[0];
+    let summary = '';
+    
+    // 从第一行提取标题（如果是 # 格式）
+    const titleMatch = content.match(/^#\s+(.+)$/m);
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+    }
+    
+    // 从文件名提取日期
+    if (filename) {
+      const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        date = dateMatch[1];
+      }
+    }
+    
+    // 从内容概览部分提取摘要
+    const summaryMatch = content.match(/##\s*📝\s*内容概览[\s\S]*?\n([\s\S]*?)(?=\n##|$)/);
+    if (summaryMatch) {
+      summary = summaryMatch[1].trim().replace(/^-\s*/gm, '').substring(0, 200);
+    }
+    
     return {
       metadata: {
-        title: 'Untitled',
-        date: new Date().toISOString().split('T')[0],
-        author: 'Unknown',
-        summary: '',
-        tags: []
+        title,
+        date,
+        author: 'AI Reporter',
+        summary,
+        tags: [],
+        slug: filename ? generateSlug(filename) : ''
       },
       body: content
     };
@@ -52,7 +77,8 @@ function parseFrontmatter(content: string): { metadata: ArticleMetadata; body: s
       date: metadata.date || new Date().toISOString().split('T')[0],
       author: metadata.author || 'Unknown',
       summary: metadata.summary || '',
-      tags: metadata.tags || []
+      tags: metadata.tags || [],
+      slug: filename ? generateSlug(filename) : ''
     },
     body
   };
@@ -75,15 +101,18 @@ export async function getArticles(): Promise<ArticleListItem[]> {
         
         // 直接使用 JSON 文件中的元数据，无需重新解析每个文件
         const articles: ArticleListItem[] = fileList.files.map((file: any) => ({
-          slug: file.slug,
-          title: file.title,
-          date: file.date,
-          author: file.author || 'AI Reporter',
-          summary: file.summary || '',
-          tags: file.tags || []
+          metadata: {
+            title: file.title,
+            date: file.date,
+            author: file.author || 'AI Reporter',
+            summary: file.summary || '',
+            tags: file.tags || [],
+            slug: file.slug
+          },
+          filename: `${file.slug}.md`
         }));
         
-        return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return articles.sort((a, b) => new Date(b.metadata.date).getTime() - new Date(a.metadata.date).getTime());
       }
     } catch (jsonError) {
       console.warn('无法读取 JSON 文件列表，使用传统方式:', jsonError);
@@ -104,14 +133,13 @@ export async function getArticles(): Promise<ArticleListItem[]> {
           const fileResponse = await fetch(`/outputs/${filename}`);
           if (fileResponse.ok) {
             const content = await fileResponse.text();
-            const { metadata } = parseFrontmatter(content);
+            const { metadata } = parseFrontmatter(content, filename);
             articles.push({
-              slug: generateSlug(filename),
-              title: metadata.title,
-              date: metadata.date,
-              author: metadata.author,
-              summary: metadata.summary,
-              tags: metadata.tags
+              metadata: {
+                ...metadata,
+                slug: generateSlug(filename)
+              },
+              filename
             });
           }
         } catch (error) {
@@ -119,7 +147,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
         }
       }
       
-      return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return articles.sort((a, b) => new Date(b.metadata.date).getTime() - new Date(a.metadata.date).getTime());
     }
     
     // 这里应该解析目录列表，但由于浏览器限制，我们使用已知文件列表
@@ -131,14 +159,13 @@ export async function getArticles(): Promise<ArticleListItem[]> {
         const fileResponse = await fetch(`/outputs/${filename}`);
         if (fileResponse.ok) {
           const content = await fileResponse.text();
-          const { metadata } = parseFrontmatter(content);
+          const { metadata } = parseFrontmatter(content, filename);
           articles.push({
-            slug: generateSlug(filename),
-            title: metadata.title,
-            date: metadata.date,
-            author: metadata.author,
-            summary: metadata.summary,
-            tags: metadata.tags
+            metadata: {
+              ...metadata,
+              slug: generateSlug(filename)
+            },
+            filename
           });
         }
       } catch (error) {
@@ -146,7 +173,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
       }
     }
     
-    return articles.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return articles.sort((a, b) => new Date(b.metadata.date).getTime() - new Date(a.metadata.date).getTime());
   } catch (error) {
     console.error('Failed to get articles:', error);
     return [];
@@ -157,6 +184,29 @@ export async function getArticles(): Promise<ArticleListItem[]> {
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   try {
     const filename = `${slug}.md`;
+    
+    // 优先尝试从 JSON 文件中获取元数据
+    let jsonMetadata = null;
+    try {
+      const jsonResponse = await fetch('/outputs/file-list.json');
+      if (jsonResponse.ok) {
+        const fileList = await jsonResponse.json();
+        const fileInfo = fileList.files.find((file: any) => file.slug === slug);
+        if (fileInfo) {
+          jsonMetadata = {
+            title: fileInfo.title,
+            date: fileInfo.date,
+            author: fileInfo.author || 'AI Reporter',
+            summary: fileInfo.summary || '',
+            tags: fileInfo.tags || [],
+            slug: fileInfo.slug
+          };
+        }
+      }
+    } catch (jsonError) {
+      console.warn('无法读取 JSON 元数据:', jsonError);
+    }
+    
     const response = await fetch(`/outputs/${filename}`);
     
     if (!response.ok) {
@@ -164,16 +214,25 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     }
     
     const content = await response.text();
-    const { metadata, body } = parseFrontmatter(content);
+    
+    // 如果有 JSON 元数据，使用它；否则解析 markdown
+    let metadata, body;
+    if (jsonMetadata) {
+      metadata = jsonMetadata;
+      body = content;
+    } else {
+      const parsed = parseFrontmatter(content, filename);
+      metadata = parsed.metadata;
+      body = parsed.body;
+    }
     
     return {
-      slug,
-      title: metadata.title,
-      date: metadata.date,
-      author: metadata.author,
-      summary: metadata.summary,
-      tags: metadata.tags,
-      content: body
+      metadata: {
+        ...metadata,
+        slug
+      },
+      content: body,
+      filename
     };
   } catch (error) {
     console.error(`Failed to get article ${slug}:`, error);
@@ -192,8 +251,8 @@ export async function searchArticles(query: string): Promise<ArticleListItem[]> 
   const searchTerm = query.toLowerCase();
   
   return allArticles.filter(article => 
-    article.title.toLowerCase().includes(searchTerm) ||
-    article.summary.toLowerCase().includes(searchTerm) ||
-    article.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+    article.metadata.title.toLowerCase().includes(searchTerm) ||
+    article.metadata.summary?.toLowerCase().includes(searchTerm) ||
+    article.metadata.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm))
   );
 }

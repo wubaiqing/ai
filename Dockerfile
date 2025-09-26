@@ -1,58 +1,89 @@
-# 使用官方Node.js镜像作为基础镜像
-FROM node:20-alpine
+# 第一阶段：前端构建
+FROM node:20-slim as frontend-builder
 
 # 设置工作目录
 WORKDIR /app
 
-# 设置APK中国镜像源以提高下载速度
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# 复制前端项目文件
+COPY frontend/package*.json ./
+COPY frontend/vite.config.ts ./
+COPY frontend/index.html ./
+COPY frontend/src/ ./src/
+COPY frontend/public/ ./public/
+COPY frontend/tsconfig.json ./
+COPY frontend/tsconfig.app.json ./
+COPY frontend/tsconfig.node.json ./
+COPY frontend/tailwind.config.js ./
+COPY frontend/postcss.config.js ./
+
+# 安装前端依赖
+RUN npm install
+
+# 构建前端项目
+RUN npm run build
+
+# 第二阶段：运行时环境
+FROM node:20-slim
 
 # 安装必要的系统依赖
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
     ca-certificates \
-    ttf-freefont \
-    git \
-    bash \
-    tzdata
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libgconf-2-4 \
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
 
-# 设置时区为中国时区
-RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone
+# 安装 Chromium
+RUN apt-get update && apt-get install -y chromium && rm -rf /var/lib/apt/lists/*
 
-# 设置Puppeteer中国镜像源以提高下载速度
-ENV PUPPETEER_DOWNLOAD_HOST=https://registry.npmmirror.com/-/binary
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 告诉Puppeteer跳过下载Chromium，使用系统安装的版本
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# 设置工作目录
+WORKDIR /app
 
-# 复制package.json和pnpm-lock.yaml
+# 复制 package.json 和 package-lock.json（如果存在）
 COPY package*.json ./
-# COPY pnpm-lock.yaml ./
 
-# 安装pnpm并安装依赖
-RUN npm install -g pnpm && \
-    pnpm install 
+# 安装生产依赖
+RUN npm install --only=production
 
-# 复制应用代码
-COPY . .
+# 复制后端应用代码
+COPY app.js ./
+COPY start.sh ./
+COPY scripts/ ./scripts/
+
+# 从构建阶段复制前端构建产物
+COPY --from=frontend-builder /app/dist /var/www/html
+
+# 复制 outputs 目录到 nginx 服务目录（用于前端访问）
+COPY frontend/public/outputs /var/www/html/outputs
 
 # 创建必要的目录
-RUN mkdir -p logs
+RUN mkdir -p logs outputs
 
-# Note: No shell scripts in /app/scripts directory to set permissions for
+# 复制 outputs 目录到应用目录（用于后端脚本）
+COPY frontend/public/outputs /app/outputs
 
-# 设置启动脚本权限（使用现有的start.sh）
-RUN chmod +x /app/start.sh
+# 复制 nginx 配置
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "console.log('Health check passed')" || exit 1
+# 设置执行权限
+RUN chmod +x start.sh
 
-# 启动命令：运行启动脚本
-CMD ["/app/start.sh"]
+# 暴露端口
+EXPOSE 80
+
+# 启动应用
+CMD ["./start.sh"]

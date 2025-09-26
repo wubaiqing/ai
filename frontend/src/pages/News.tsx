@@ -35,16 +35,16 @@ const News: React.FC = () => {
     // Filter by search query
     if (searchQuery.trim()) {
       filtered = filtered.filter(article =>
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        article.metadata.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        article.metadata.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        article.metadata.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
     // Filter by selected tag
     if (selectedTag) {
       filtered = filtered.filter(article =>
-        article.tags?.includes(selectedTag)
+        article.metadata.tags?.includes(selectedTag)
       );
     }
 
@@ -63,7 +63,7 @@ const News: React.FC = () => {
   const getAllTags = () => {
     const tagSet = new Set<string>();
     articles.forEach(article => {
-      article.tags?.forEach(tag => tagSet.add(tag));
+      article.metadata.tags?.forEach(tag => tagSet.add(tag));
     });
     return Array.from(tagSet).sort();
   };
@@ -200,42 +200,42 @@ const News: React.FC = () => {
         <div className="space-y-6">
           {filteredArticles.map((article) => (
             <article
-              key={article.slug}
+              key={article.metadata.slug}
               className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <time dateTime={article.date}>
-                      {formatDate(article.date)}
+                    <time dateTime={article.metadata.date}>
+                      {formatDate(article.metadata.date)}
                     </time>
-                    {article.author && (
+                    {article.metadata.author && (
                       <>
                         <span className="mx-2">•</span>
-                        <span>{article.author}</span>
+                        <span>{article.metadata.author}</span>
                       </>
                     )}
                   </div>
 
                   <Link
-                    to={`/article/${article.slug}`}
+                    to={`/article/${article.metadata.slug}`}
                     className="block group"
                   >
                     <h2 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
-                      {article.title}
+                      {article.metadata.title}
                     </h2>
                   </Link>
 
-                  {article.summary && (
+                  {article.metadata.summary && (
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                      {article.summary}
+                      {article.metadata.summary}
                     </p>
                   )}
 
                   <div className="flex items-center justify-between">
-                    {article.tags && article.tags.length > 0 && (
+                    {article.metadata.tags && article.metadata.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {article.tags.map((tag) => (
+                        {article.metadata.tags.map((tag) => (
                           <button
                             key={tag}
                             onClick={() => setSelectedTag(tag)}
@@ -248,7 +248,7 @@ const News: React.FC = () => {
                     )}
 
                     <Link
-                      to={`/article/${article.slug}`}
+                      to={`/article/${article.metadata.slug}`}
                       className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
                     >
                       Read more

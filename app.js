@@ -242,7 +242,7 @@ function main() {
     // 直接调用爬取函数，不使用外部脚本
     const { scrapeTwitterListWithAuthentication } = require('./scripts/tasks/crawl-tweets');
     const defaultListId = "1950374938378113192";
-    const testScrollCount = 500;
+    const testScrollCount = 300;
     
     (async () => {
         try {

@@ -6,6 +6,16 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   publicDir: 'public',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    // 确保构建时复制 outputs 目录
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html')
+      }
+    }
+  },
   server: {
     fs: {
       // 允许访问项目根目录外的文件
@@ -15,6 +25,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // 添加对 outputs 目录的别名
+      '@outputs': path.resolve(__dirname, '../outputs'),
     },
   },
 })

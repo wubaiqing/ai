@@ -133,14 +133,71 @@ class FileOperationService {
     const formattedReportDate = TimeUtils.formatDateToLocalizedString(reportGenerationTimestamp);
     const formattedGenerationDateTime = TimeUtils.formatDateTimeToLocalizedString(reportGenerationTimestamp);
     
-    const reportHeaderSection = `# AI科技简报 - ${formattedReportDate}\n\n`;
-    const reportMetadataSection = `生成时间: ${formattedGenerationDateTime}\n`;
-    const dataSourceInfo = reportMetadata.tweetsCount ? `数据来源: ${reportMetadata.tweetsCount} 条推文\n` : '';
-    const contentSeparator = '\n---\n\n';
-    const reportFooterSection = '\n\n---\n\n*本简报由AI自动生成，基于当日推文数据分析*';
+    // 文档标题
+    const reportHeaderSection = `# 📊 AI科技简报 - ${formattedReportDate}\n\n`;
     
-    return reportHeaderSection + reportMetadataSection + dataSourceInfo + contentSeparator + aiGeneratedContent + reportFooterSection;
+    // 生成内容概览部分（替代原摘要）
+    const overviewSection = this.generateContentOverview(aiGeneratedContent, reportMetadata);
+    
+    // 元数据信息
+    const metadataSection = `## 📋 报告信息\n\n` +
+      `- **生成时间**: ${formattedGenerationDateTime}\n` +
+      (reportMetadata.tweetsCount ? `- **数据来源**: ${reportMetadata.tweetsCount} 条推文\n` : '') +
+      `- **报告类型**: 每日科技动态简报\n\n`;
+    
+    // 内容分隔符
+    const contentSeparator = '---\n\n';
+    
+    // 页脚
+    const reportFooterSection = '\n\n---\n\n' +
+      `> 📅 **更新时间**: ${formattedGenerationDateTime}`;
+    
+    return reportHeaderSection + overviewSection + metadataSection + contentSeparator + aiGeneratedContent + reportFooterSection;
   }
+
+  /**
+   * 生成内容概览（200字以内）
+   * @param {string} aiGeneratedContent - AI生成的内容
+   * @param {Object} reportMetadata - 报告元数据
+   * @returns {string} 内容概览
+   */
+  generateContentOverview(aiGeneratedContent, reportMetadata) {
+    // 提取主要话题数量
+    const topicMatches = aiGeneratedContent.match(/##\s+[^\n]+/g) || [];
+    const topicCount = topicMatches.length;
+    
+    // 提取主要话题标题（前3个），去掉 emoji 表情符号
+    const mainTopics = topicMatches.slice(0, 3).map(topic => 
+      topic.replace(/##\s+/, '')
+           .replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA70}-\u{1FAFF}]/gu, '')
+           .trim()
+    );
+    
+    let overview = `## 内容概览\n\n`;
+    overview += `基于`;
+    
+    if (reportMetadata.tweetsCount) {
+      overview += ` **${reportMetadata.tweetsCount}** 条推文数据深度分析，`;
+    }
+    
+    overview += `重点关注：`;
+    
+    if (mainTopics.length > 0) {
+      overview += mainTopics.slice(0, 2).join('、');
+      if (mainTopics.length > 2) {
+        overview += `、${mainTopics[2]}`;
+      }
+      overview += `等领域`;
+    } else {
+      overview += `人工智能、云计算、区块链等前沿技术`;
+    }
+    
+    overview += `的最新动态，为您提供精准的行业洞察和趋势分析。\n\n`;
+    
+    return overview;
+  }
+
+
 
   /**
    * 保存报告内容到指定文件

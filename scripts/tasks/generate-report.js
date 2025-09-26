@@ -5,6 +5,7 @@
  * @requires ./src/lib/config
  */
 
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 const { aiReportGenerator } = require('../core/reports/generator');
 const { applicationConfig, validateEnvironmentVariables } = require('../core/reports/config');
 const { Logger, ErrorHandler } = require('../core/lib/utils');

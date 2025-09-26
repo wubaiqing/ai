@@ -106,41 +106,41 @@ const Home: React.FC = () => {
         <div className="space-y-6">
           {articles.map((article) => (
             <article
-              key={article.slug}
+              key={article.metadata.slug}
               className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <Link
-                    to={`/article/${article.slug}`}
+                    to={`/article/${article.metadata.slug}`}
                     className="block group"
                   >
                     <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {article.title}
+                      {article.metadata.title}
                     </h3>
                   </Link>
                   
                   <div className="flex items-center text-sm text-gray-500 mb-3">
-                    <time dateTime={article.date}>
-                      {formatDate(article.date)}
+                    <time dateTime={article.metadata.date}>
+                      {formatDate(article.metadata.date)}
                     </time>
-                    {article.author && (
+                    {article.metadata.author && (
                       <>
                         <span className="mx-2">•</span>
-                        <span>{article.author}</span>
+                        <span>{article.metadata.author}</span>
                       </>
                     )}
                   </div>
 
-                  {article.summary && (
+                  {article.metadata.summary && (
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                      {article.summary}
+                      {article.metadata.summary}
                     </p>
                   )}
 
-                  {article.tags && article.tags.length > 0 && (
+                  {article.metadata.tags && article.metadata.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {article.tags.map((tag) => (
+                      {article.metadata.tags.map((tag) => (
                         <span
                           key={tag}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
