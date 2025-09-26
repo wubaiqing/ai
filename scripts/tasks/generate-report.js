@@ -78,8 +78,10 @@ function displayApplicationHelp() {
 使用方法: node scripts/generate-report.js [选项]
 
 选项:
-  -h, --help     显示此帮助信息
-  -v, --version  显示版本信息
+  -h, --help        显示此帮助信息
+  -v, --version     显示版本信息
+  -d, --date DATE   指定生成简报的日期 (格式: YYYY-MM-DD，默认为当天)
+  --show-content    显示生成的简报内容
 
 描述:
   自动从数据库获取推文数据，使用AI分析生成科技资讯简报
@@ -90,7 +92,79 @@ function displayApplicationHelp() {
   
 输出:
   生成的简报将保存到 outputs/ 目录下
+
+示例:
+  node scripts/generate-report.js                    # 生成当天简报
+  node scripts/generate-report.js -d 2024-01-15      # 生成指定日期简报
+  node scripts/generate-report.js --date 2024-01-15  # 生成指定日期简报
 `);
+}
+
+/**
+ * 解析日期参数
+ * @param {string} dateStr - 日期字符串
+ * @returns {string} 格式化的日期字符串 (YYYY-MM-DD)
+ * @throws {Error} 日期格式无效时抛出错误
+ */
+function parseDateArgument(dateStr) {
+  if (!dateStr) {
+    // 默认返回当天日期
+    return new Date().toISOString().split('T')[0];
+  }
+  
+  // 验证日期格式 YYYY-MM-DD
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateStr)) {
+    throw new Error(`无效的日期格式: ${dateStr}，请使用 YYYY-MM-DD 格式`);
+  }
+  
+  // 验证日期是否有效
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    throw new Error(`无效的日期: ${dateStr}`);
+  }
+  
+  // 验证日期不能是未来日期
+  const today = new Date();
+  today.setHours(23, 59, 59, 999); // 设置为当天最后一刻
+  if (date > today) {
+    throw new Error(`日期不能是未来日期: ${dateStr}`);
+  }
+  
+  return dateStr;
+}
+
+/**
+ * 解析命令行参数
+ * @param {string[]} args - 命令行参数数组
+ * @returns {Object} 解析后的选项对象
+ */
+function parseCommandLineArguments(args) {
+  const options = {
+    showContent: false,
+    targetDate: null
+  };
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    if (arg === '--show-content') {
+      options.showContent = true;
+    } else if (arg === '-d' || arg === '--date') {
+      if (i + 1 >= args.length) {
+        throw new Error('日期参数缺少值');
+      }
+      options.targetDate = parseDateArgument(args[i + 1]);
+      i++; // 跳过下一个参数（日期值）
+    }
+  }
+  
+  // 如果没有指定日期，使用当天
+  if (!options.targetDate) {
+    options.targetDate = parseDateArgument();
+  }
+  
+  return options;
 }
 
 /**
@@ -100,7 +174,7 @@ function displayApplicationHelp() {
 async function initializeApplication() {
   const commandLineArguments = process.argv.slice(2);
   
-  // 处理命令行参数
+  // 处理帮助和版本参数
   if (commandLineArguments.includes('-h') || commandLineArguments.includes('--help')) {
     displayApplicationHelp();
     process.exit(0);
@@ -113,11 +187,18 @@ async function initializeApplication() {
     return;
   }
   
-  const options = {
-    showContent: commandLineArguments.includes('--show-content')
-  };
-  
-  await executeAIReportGeneration(options);
+  try {
+    // 解析命令行参数
+    const options = parseCommandLineArguments(commandLineArguments);
+    
+    Logger.info(`生成日期: ${options.targetDate}`);
+    
+    await executeAIReportGeneration(options);
+  } catch (error) {
+    Logger.error('参数解析错误:', { error: error.message });
+    displayApplicationHelp();
+    process.exit(1);
+  }
 }
 
 // 如果直接运行此文件，则执行主程序

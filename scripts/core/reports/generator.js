@@ -62,18 +62,20 @@ class AIReportGenerator {
   }
 
   /**
-   * 生成当日推文简报
+   * 生成推文简报
    * 
    * 执行完整的报告生成流程：获取推文数据 → AI分析 → 生成报告 → 保存文件
    * 
    * @async
-   * @method generateDailyReport
+   * @method generateCompleteReport
    * @param {Object} [generationOptions] - 生成选项
+   * @param {string} [generationOptions.targetDate] - 目标日期 (YYYY-MM-DD 格式)
+   * @param {boolean} [generationOptions.showContent] - 是否显示生成内容
    * @returns {Promise<Object>} 报告生成结果
    * @returns {Promise<{success: boolean, filePath: string, reportContent: string, tweetCount: number, generationTime: number}>} 生成结果详情
    * @throws {Error} 当报告生成过程中出现错误时抛出错误
    * @example
-   * const result = await generator.generateDailyReport();
+   * const result = await generator.generateCompleteReport({ targetDate: '2024-01-15' });
    * if (result.success) {
    *   console.log(`报告已保存到: ${result.filePath}`);
    *   console.log(`处理了 ${result.tweetCount} 条推文`);
@@ -81,17 +83,18 @@ class AIReportGenerator {
    */
   async generateCompleteReport(generationOptions = {}) {
     const processStartTime = Date.now();
-    Logger.info('开始生成AI简报...');
+    const targetDate = generationOptions.targetDate || new Date().toISOString().split('T')[0];
+    Logger.info(`开始生成AI简报... 目标日期: ${targetDate}`);
     
     try {
-      // 1. 获取今日推文数据
-      const todayTweetData = await this.fetchTodayTweetData();
+      // 1. 获取指定日期推文数据
+      const tweetData = await this.fetchTweetDataByDate(targetDate);
       
       // 2. 验证数据完整性
-      this.validateTweetDataIntegrity(todayTweetData);
+      this.validateTweetDataIntegrity(tweetData);
       
       // 3. 预处理和标准化数据
-      const normalizedTweetData = this.preprocessAndNormalizeTweetData(todayTweetData);
+      const normalizedTweetData = this.preprocessAndNormalizeTweetData(tweetData);
       
       // 4. 生成智能报告内容
       const intelligentReportContent = await this.generateIntelligentReportContent(normalizedTweetData);
@@ -101,6 +104,7 @@ class AIReportGenerator {
         metadata: {
           tweetsCount: normalizedTweetData.length,
           generationTime: new Date(),
+          targetDate: targetDate,
           dataSource: 'tweets_table'
         }
       });
@@ -141,21 +145,31 @@ class AIReportGenerator {
   }
 
   /**
-   * 获取今日推文数据
+   * 获取指定日期推文数据
+   * @param {string} targetDate - 目标日期 (YYYY-MM-DD 格式)
    * @returns {Promise<Array>} 推文数据数组
    * @private
    */
-  async fetchTodayTweetData() {
+  async fetchTweetDataByDate(targetDate) {
     try {
-      Logger.info('开始获取今日推文数据...');
+      Logger.info(`开始获取 ${targetDate} 的推文数据...`);
       
-      const todayTweets = await this.tweetService.fetchTodayTweetCollection();
+      // 如果是今天的日期，使用原有的方法
+      const today = new Date().toISOString().split('T')[0];
+      let tweets;
       
-      Logger.info(`成功获取 ${todayTweets.length} 条推文数据`);
+      if (targetDate === today) {
+        tweets = await this.tweetService.fetchTodayTweetCollection();
+      } else {
+        // 使用新的按日期获取方法
+        tweets = await this.tweetService.fetchTweetsBySpecificDate(targetDate);
+      }
       
-      return todayTweets;
+      Logger.info(`成功获取 ${targetDate} 的 ${tweets.length} 条推文数据`);
+      
+      return tweets;
     } catch (error) {
-      Logger.error('获取推文数据失败', { error: error.message });
+      Logger.error(`获取 ${targetDate} 推文数据失败`, { error: error.message });
       throw error;
     }
   }

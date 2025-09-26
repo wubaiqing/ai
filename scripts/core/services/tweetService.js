@@ -106,6 +106,65 @@ class TweetDataService {
   }
 
   /**
+   * 获取指定日期的推文数据
+   * 
+   * 查询指定日期当天的所有推文数据
+   * 
+   * @async
+   * @method fetchTweetsBySpecificDate
+   * @param {string} targetDate - 目标日期 (YYYY-MM-DD 格式)
+   * @returns {Promise<Array<Object>>} 指定日期的推文数据数组
+   * @throws {Error} 当日期参数无效或数据库查询失败时抛出错误
+   * @example
+   * const tweets = await tweetService.fetchTweetsBySpecificDate('2024-01-15');
+   * console.log(`获取到 ${tweets.length} 条推文`);
+   */
+  async fetchTweetsBySpecificDate(targetDate) {
+    return await connectionManager.executeWithRetry(async (client) => {
+      if (ValidationUtils.isEmptyOrWhitespace(targetDate)) {
+        throw ErrorHandler.createStandardizedError('目标日期不能为空', 'INVALID_TARGET_DATE');
+      }
+      
+      // 验证日期格式
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(targetDate)) {
+        throw ErrorHandler.createStandardizedError(
+          `无效的日期格式: ${targetDate}，请使用 YYYY-MM-DD 格式`,
+          'INVALID_DATE_FORMAT'
+        );
+      }
+      
+      Logger.info(`获取指定日期的推文数据: ${targetDate}`);
+      
+      // 构建日期范围：从当天 00:00:00 到 23:59:59
+      const startTime = `${targetDate}T00:00:00.000Z`;
+      const endTime = `${targetDate}T23:59:59.999Z`;
+      
+      const { tableName: tweetTableName } = applicationConfig.database;
+      
+      const { data: tweetDataCollection, error: databaseQueryError } = await client
+        .from(tweetTableName)
+        .select('*')
+        .gte('created_at', startTime)
+        .lte('created_at', endTime)
+        .order('created_at', { ascending: false });
+      
+      if (databaseQueryError) {
+        throw ErrorHandler.createStandardizedError(
+          `数据库查询失败: ${databaseQueryError.message}`,
+          'DATABASE_QUERY_ERROR',
+          databaseQueryError
+        );
+      }
+      
+      const retrievedTweetCount = tweetDataCollection ? tweetDataCollection.length : 0;
+      Logger.info(`成功获取到 ${targetDate} 的 ${retrievedTweetCount} 条推文数据`);
+      
+      return tweetDataCollection || [];
+    }, 'fetch_tweets_by_specific_date');
+  }
+
+  /**
    * 根据指定时间范围获取推文数据
    * 
    * @async
