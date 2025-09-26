@@ -116,6 +116,7 @@ function validateEnvironmentVariables() {
  * 获取文件操作相关配置
  * 
  * @method getFileOperationConfig
+ * @param {string|Date} [targetDate] - 目标日期，可以是 YYYY-MM-DD 格式的字符串或 Date 对象
  * @returns {string} 格式化的文件名
  * @returns {string} returns.outputDirectory - 报告输出目录路径
  * @returns {string} returns.fileNamePrefix - 文件名前缀
@@ -125,15 +126,35 @@ function validateEnvironmentVariables() {
  * const fileConfig = config.getFileOperationConfig();
  * console.log(fileConfig.outputDirectory);
  */
-function generateReportFileName() {
-  const currentDate = TimezoneUtils.formatDate(new Date());
-  return applicationConfig.output.fileNameTemplate.replace('{date}', currentDate);
+function generateReportFileName(targetDate = null) {
+  let dateToUse;
+  
+  if (targetDate) {
+    // 如果传入了目标日期
+    if (typeof targetDate === 'string') {
+      // 如果是字符串格式 (YYYY-MM-DD)，转换为 Date 对象
+      dateToUse = new Date(targetDate + 'T00:00:00.000Z');
+    } else if (targetDate instanceof Date) {
+      // 如果已经是 Date 对象，直接使用
+      dateToUse = targetDate;
+    } else {
+      // 如果格式不正确，使用当前日期
+      dateToUse = new Date();
+    }
+  } else {
+    // 如果没有传入目标日期，使用当前日期
+    dateToUse = new Date();
+  }
+  
+  const formattedDate = TimezoneUtils.formatDate(dateToUse);
+  return applicationConfig.output.fileNameTemplate.replace('{date}', formattedDate);
 }
 
 /**
  * 获取业务逻辑相关配置
  * 
  * @method getBusinessLogicConfig
+ * @param {string|Date} [targetDate] - 目标日期，可以是 YYYY-MM-DD 格式的字符串或 Date 对象
  * @returns {string} 完整的文件路径
  * @returns {number} returns.minReportLength - 报告最小长度要求
  * @returns {number} returns.maxTweetCount - 单次处理最大推文数量
@@ -143,8 +164,8 @@ function generateReportFileName() {
  * const businessConfig = config.getBusinessLogicConfig();
  * console.log(businessConfig.minReportLength);
  */
-function getReportFilePath() {
-  const fileName = generateReportFileName();
+function getReportFilePath(targetDate = null) {
+  const fileName = generateReportFileName(targetDate);
   return path.join(applicationConfig.output.baseDirectory, fileName);
 }
 

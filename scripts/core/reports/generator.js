@@ -101,6 +101,7 @@ class AIReportGenerator {
       
       // 5. 保存生成的报告
       const savedFilePath = await this.saveGeneratedReport(intelligentReportContent, {
+        targetDate: targetDate,
         metadata: {
           tweetsCount: normalizedTweetData.length,
           generationTime: new Date(),
@@ -288,6 +289,7 @@ class AIReportGenerator {
    * 保存生成的报告
    * @param {string} reportContent - 报告内容
    * @param {Object} options - 保存选项
+   * @param {string} [options.targetDate] - 目标日期，用于生成文件名
    * @returns {Promise<string>} 保存的文件路径
    */
   async saveGeneratedReport(reportContent, options = {}) {

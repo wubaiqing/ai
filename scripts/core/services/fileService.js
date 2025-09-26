@@ -208,12 +208,13 @@ class FileOperationService {
    * @method saveReportToFile
    * @param {string} reportContentData - 要保存的报告内容
    * @param {Object} [saveOptions] - 保存选项
+   * @param {string|Date} [saveOptions.targetDate] - 目标日期，用于生成文件名
    * @returns {Promise<string>} 保存的文件路径
    * @throws {Error} 当文件保存失败时抛出错误
    * @example
    * const result = await fileService.saveReportToFile(
    *   'Daily Report Content',
-   *   '/outputs/daily_report_2024-01-01.txt'
+   *   { targetDate: '2025-09-25' }
    * );
    * console.log(`文件已保存: ${result.filePath}`);
    */
@@ -228,8 +229,8 @@ class FileOperationService {
       // 确保输出目录存在
       await this.ensureReportOutputDirectoryExists();
       
-      // 生成文件路径
-      const reportFilePath = saveOptions.customPath || getReportFilePath();
+      // 生成文件路径，传入目标日期
+      const reportFilePath = saveOptions.customPath || getReportFilePath(saveOptions.targetDate);
       
       // 生成完整的报告内容
       const completeReportContent = this.generateFormattedReportContent(reportContentData, saveOptions.metadata);
