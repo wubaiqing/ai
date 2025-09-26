@@ -8,6 +8,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 const { TimezoneUtils } = require('./scripts/core/lib/timezone');
 
 // 日志函数
@@ -198,9 +199,32 @@ class TaskScheduler {
 
 
 
+// 创建健康检查服务器
+function createHealthServer() {
+    const server = http.createServer((req, res) => {
+        if (req.url === '/health') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }));
+        } else {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('Not Found');
+        }
+    });
+    
+    const port = process.env.PORT || 3000;
+    server.listen(port, () => {
+        log('INFO', `Health check server listening on port ${port}`);
+    });
+    
+    return server;
+}
+
 // 主函数
 function main() {
     log('INFO', 'Twitter AI Reporter Service Starting...');
+    
+    // 启动健康检查服务器
+    const healthServer = createHealthServer();
     
     // 确保必要的目录存在
     const dirs = ['logs'];
@@ -258,13 +282,19 @@ function main() {
     process.on('SIGINT', () => {
         log('INFO', 'Received SIGINT, shutting down gracefully...');
         scheduler.stop();
-        process.exit(0);
+        healthServer.close(() => {
+            log('INFO', 'Health server closed');
+            process.exit(0);
+        });
     });
     
     process.on('SIGTERM', () => {
         log('INFO', 'Received SIGTERM, shutting down gracefully...');
         scheduler.stop();
-        process.exit(0);
+        healthServer.close(() => {
+            log('INFO', 'Health server closed');
+            process.exit(0);
+        });
     });
     
     // 保持进程运行

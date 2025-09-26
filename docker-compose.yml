@@ -1,24 +1,44 @@
 version: '3.8'
 
 services:
-  ai-tech-brief:
+  # 前端服务 - React 应用
+  frontend:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: ai-tech-brief
+      dockerfile: Dockerfile.frontend
+    container_name: ai-tech-brief-frontend
     restart: unless-stopped
     ports:
       - "8096:80"
+    volumes:
+      # 挂载 outputs 目录用于显示生成的报告
+      - shared-outputs:/usr/share/nginx/html/outputs
+    networks:
+      - ai-tech-brief-network
+    depends_on:
+      - backend
+    labels:
+      - "com.docker.compose.project=ai-tech-brief"
+      - "com.docker.compose.service=frontend"
+
+  # 后端服务 - Node.js 爬虫服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ai-tech-brief-backend
+    restart: unless-stopped
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - HEADLESS=true
     volumes:
       # 挂载日志目录到宿主机
       - ./logs:/app/logs
-      # 挂载 outputs 目录到宿主机（映射到前端 public 目录）
-      - ./frontend/public/outputs:/app/outputs
+      # 挂载 outputs 目录用于生成报告
+      - shared-outputs:/app/outputs
       # 挂载环境变量文件（如果存在）
       - ./.env:/app/.env:ro
       # 挂载 cookies.json 文件
@@ -34,15 +54,13 @@ services:
     security_opt:
       - no-new-privileges:true
     working_dir: /app
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     labels:
       - "com.docker.compose.project=ai-tech-brief"
-      - "com.docker.compose.service=ai-tech-brief"
+      - "com.docker.compose.service=backend"
+
+volumes:
+  shared-outputs:
+    driver: local
 
 networks:
   ai-tech-brief-network:
