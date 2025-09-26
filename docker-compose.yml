@@ -21,6 +21,8 @@ services:
       - ./frontend/public/outputs:/app/outputs
       # 挂载环境变量文件（如果存在）
       - ./.env:/app/.env:ro
+      # 挂载 cookies.json 文件
+      - ./cookies.json:/app/cookies.json:ro
     networks:
       - ai-tech-brief-network
     deploy:

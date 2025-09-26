@@ -17,7 +17,7 @@ const { TimezoneUtils } = require("../core/lib/timezone");
 const { handleCookieConsentWithRetry } = require("../core/lib/cookieConsent");
 
 const CONFIG = {
-  CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
+  CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium",
   COOKIES_FILE_PATH: APPLICATION_CONFIG.getTwitterConfiguration().cookiesFilePath,
   DEFAULT_MAX_SCROLL_COUNT: 100,
   PAGE_LOAD_TIMEOUT: 60000,
@@ -212,6 +212,44 @@ async function scrapeTwitterListWithAuthentication(
       "--no-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--disable-extensions",
+      "--disable-background-timer-throttling",
+      "--disable-backgrounding-occluded-windows",
+      "--disable-renderer-backgrounding",
+      "--disable-features=TranslateUI",
+      "--disable-ipc-flooding-protection",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-default-apps",
+      "--disable-popup-blocking",
+      "--disable-prompt-on-repost",
+      "--disable-hang-monitor",
+      "--disable-sync",
+      "--disable-web-security",
+      "--disable-features=VizDisplayCompositor",
+      "--run-all-compositor-stages-before-draw",
+      "--disable-background-networking",
+      "--disable-background-timer-throttling",
+      "--disable-client-side-phishing-detection",
+      "--disable-default-apps",
+      "--disable-dev-shm-usage",
+      "--disable-extensions",
+      "--disable-features=TranslateUI",
+      "--disable-hang-monitor",
+      "--disable-ipc-flooding-protection",
+      "--disable-popup-blocking",
+      "--disable-prompt-on-repost",
+      "--disable-renderer-backgrounding",
+      "--disable-sync",
+      "--disable-translate",
+      "--disable-windows10-custom-titlebar",
+      "--metrics-recording-only",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--safebrowsing-disable-auto-update",
+      "--enable-automation",
+      "--password-store=basic",
+      "--use-mock-keychain"
     ],
     protocolTimeout: 180000, // 降低超时时间
     waitForInitialPage: false,
@@ -552,7 +590,7 @@ async function scrapeTwitterListWithAuthentication(
 
 async function executeTwitterScrapingTask() {
   const defaultListId = "1950374938378113192";
-  const testScrollCount = 500;
+  const testScrollCount = 300;
 
   try {
     console.log(`[${new Date().toISOString()}] [CRAWL-START] 开始执行Twitter爬取任务...`);

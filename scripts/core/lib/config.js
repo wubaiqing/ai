@@ -126,7 +126,7 @@ class ApplicationConfiguration {
   getChromeExecutablePath() {
     // 群辉NAS Docker环境优化
     const defaultPath = process.platform === 'linux' 
-      ? '/usr/bin/chromium-browser' 
+      ? '/usr/bin/chromium' 
       : process.env.CHROME_EXECUTABLE_PATH;
     
     return process.env.CHROME_EXECUTABLE_PATH || defaultPath;

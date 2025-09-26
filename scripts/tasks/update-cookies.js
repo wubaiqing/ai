@@ -19,7 +19,7 @@ const { handleCookieConsentWithRetry } = require("../core/lib/cookieConsent");
 // 应用程序配置常量
 const CONFIG = {
   CHROME_EXECUTABLE_PATH:
-    process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
+    process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium",
   COOKIES_FILE_PATH: APPLICATION_CONFIG.getTwitterConfiguration().cookiesFilePath,
   LOGIN_TIMEOUT: 30000,
   PAGE_TIMEOUT: 30000,
