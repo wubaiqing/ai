@@ -38,7 +38,7 @@ services:
       # 挂载日志目录到宿主机
       - ./logs:/app/logs
       # 挂载 outputs 目录用于生成报告
-      - /volume1/homes/wubaiqing/重要数据/027-AI:/app/outputs
+      - /volume1/homes/wubaiqing/重要数据/027-AI:/app/frontend/public/outputs
       # 挂载环境变量文件（如果存在）
       - ./.env:/app/.env:ro
       # 挂载 cookies.json 文件
