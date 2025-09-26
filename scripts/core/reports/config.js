@@ -64,7 +64,7 @@ const applicationConfig = {
 
   // 业务逻辑配置
   business: {
-    maxReportItems: 15, // 简报最大条目数
+    maxReportItems: 20, // 简报最大条目数
     minTweetsRequired: 1, // 生成简报所需的最少推文数量
     contentCategories: ['科技', 'AI', '编程'], // 关注的内容类别
     reportLanguage: 'zh-CN', // 报告语言

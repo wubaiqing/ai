@@ -13,14 +13,8 @@ RUN npm config set registry https://registry.npmmirror.com && \
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
     libdrm2 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
     libgbm1 \
-    libxss1 \
     chromium \
     && rm -rf /var/lib/apt/lists/*
 
