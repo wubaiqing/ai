@@ -41,9 +41,6 @@ services:
     labels:
       - "com.docker.compose.project=ai-tech-brief"
       - "com.docker.compose.service=ai-tech-brief"
-      - "traefik.enable=true"
-      - "traefik.http.routers.ai-tech-brief.rule=Host(`localhost`)"
-      - "traefik.http.services.ai-tech-brief.loadbalancer.server.port=80"
 
 networks:
   ai-tech-brief-network:
