@@ -42,15 +42,9 @@ RUN pnpm install --prod
 COPY app.js ./
 COPY scripts/ ./scripts/
 
-# 创建必要的目录
-RUN mkdir -p logs outputs
-
-# 创建非 root 用户
-RUN groupadd -r appuser && useradd -r -g appuser appuser \
-    && chown -R appuser:appuser /app
-
-# 切换到非 root 用户
-USER appuser
+# 创建必要的目录和Chrome数据目录
+RUN mkdir -p logs outputs /tmp/chrome-data /tmp/chrome-crashes \
+    && chmod 755 /tmp/chrome-data /tmp/chrome-crashes
 
 # 启动应用
 CMD ["node", "app.js"]
