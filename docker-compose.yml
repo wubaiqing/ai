@@ -8,7 +8,7 @@ services:
     container_name: ai-tech-brief
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "8096:80"
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
