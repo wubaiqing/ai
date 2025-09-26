@@ -12,7 +12,7 @@ services:
       - "8096:80"
     volumes:
       # 挂载 outputs 目录用于显示生成的报告
-      - shared-outputs:/usr/share/nginx/html/outputs
+      - /volume1/homes/wubaiqing/重要数据/027-AI:/usr/share/nginx/html/outputs
     networks:
       - ai-tech-brief-network
     depends_on:
@@ -38,7 +38,7 @@ services:
       # 挂载日志目录到宿主机
       - ./logs:/app/logs
       # 挂载 outputs 目录用于生成报告
-      - shared-outputs:/app/outputs
+      - /volume1/homes/wubaiqing/重要数据/027-AI:/app/outputs
       # 挂载环境变量文件（如果存在）
       - ./.env:/app/.env:ro
       # 挂载 cookies.json 文件
@@ -58,9 +58,9 @@ services:
       - "com.docker.compose.project=ai-tech-brief"
       - "com.docker.compose.service=backend"
 
-volumes:
-  shared-outputs:
-    driver: local
+# volumes:
+  # shared-outputs:
+  #   driver: local
 
 networks:
   ai-tech-brief-network:
