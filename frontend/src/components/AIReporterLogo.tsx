@@ -1,12 +1,12 @@
 import React from 'react';
 
-interface AIReporterLogoProps {
+interface PixelDailyLogoProps {
   className?: string;
   size?: number;
   responsive?: boolean;
 }
 
-const AIReporterLogo: React.FC<AIReporterLogoProps> = ({ className = '', size = 32, responsive = true }) => {
+const PixelDailyLogo: React.FC<PixelDailyLogoProps> = ({ className = '', size = 32, responsive = true }) => {
   return (
     <div className={`flex items-center ${responsive ? 'space-x-2 sm:space-x-3' : 'space-x-3'} ${className}`}>
       {/* AI Icon */}
@@ -64,17 +64,17 @@ const AIReporterLogo: React.FC<AIReporterLogoProps> = ({ className = '', size = 
             <circle cx="16" cy="16" r="2" fill="#FFFFFF" />
           </g>
           
-          {/* AI Text in Center */}
+          {/* Pixel Text in Center */}
           <text
             x="16"
             y="18"
             textAnchor="middle"
-            fontSize="8"
+            fontSize="6"
             fontWeight="bold"
             fill="#FFFFFF"
             fontFamily="Arial, sans-serif"
           >
-            AI
+            像素
           </text>
         </svg>
       </div>
@@ -82,14 +82,11 @@ const AIReporterLogo: React.FC<AIReporterLogoProps> = ({ className = '', size = 
       {/* Text Logo */}
       <div className="flex items-center space-x-1">
         <span className={`font-bold text-blue-600 hover:text-blue-700 transition-colors duration-300 ${responsive ? 'text-lg sm:text-xl' : 'text-xl'}`}>
-          AI
-        </span>
-        <span className={`font-semibold text-gray-800 hover:text-gray-900 transition-colors duration-300 ${responsive ? 'text-lg sm:text-xl' : 'text-xl'} ${responsive ? 'hidden xs:inline' : ''}`}>
-          Reporter
+          像素日报
         </span>
       </div>
     </div>
   );
 };
 
-export default AIReporterLogo;
+export default PixelDailyLogo;

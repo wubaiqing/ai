@@ -54,11 +54,15 @@ const News: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\//g, '-');
+  };
+
+  const formatTitle = (date: string) => {
+    return `像素简报-${formatDate(date)}`;
   };
 
   const getAllTags = () => {
@@ -122,7 +126,7 @@ const News: React.FC = () => {
     <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">AI 新闻资讯</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">像素日报</h1>
           
           {/* 搜索栏 */}
           <div className="mb-6">
@@ -178,9 +182,9 @@ const News: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h2 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
-                      {article.metadata.title}
+                      {formatTitle(article.metadata.date)}
                     </h2>
-                    <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                    <p className="text-gray-600 text-sm mb-4" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
                       {article.metadata.summary}
                     </p>
                   </div>
@@ -194,7 +198,7 @@ const News: React.FC = () => {
                     </span>
                     <span className="flex items-center">
                       <User className="h-4 w-4 mr-1" />
-                      {article.metadata.author || 'AI Reporter'}
+                      {article.metadata.author || '像素简报'}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -216,14 +220,13 @@ const News: React.FC = () => {
         {/* No Results */}
         {filteredArticles.length === 0 && !loading && (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">🔍</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No articles found
+              未找到文章
             </h3>
             <p className="text-gray-500 mb-4">
               {searchQuery || selectedTag
-                ? 'Try adjusting your search criteria or filters.'
-                : 'No articles are available at the moment.'}
+                ? '请尝试调整搜索条件或筛选器。'
+                : '暂时没有可用的文章。'}
             </p>
             {(searchQuery || selectedTag) && (
               <button
@@ -233,7 +236,7 @@ const News: React.FC = () => {
                 }}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                Clear all filters
+                清除所有筛选
               </button>
             )}
           </div>
@@ -242,7 +245,7 @@ const News: React.FC = () => {
         {/* Results Count */}
         {!loading && filteredArticles.length > 0 && (
           <div className="mt-8 text-center text-sm text-gray-500">
-            Showing {filteredArticles.length} of {articles.length} articles
+            显示 {filteredArticles.length} / {articles.length} 篇文章
           </div>
         )}
       </div>

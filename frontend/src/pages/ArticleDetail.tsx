@@ -5,21 +5,14 @@ import { Calendar, User, Clock, ArrowLeft } from 'lucide-react';
 import { Article } from '../types/article';
 import { getArticleBySlug } from '../utils/fileReader';
 
-// 段落计数器
-let paragraphCounter = 0;
 
-// 获取圆圈数字的函数
-const getCircledNumber = (num: number): string => {
-  const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', 
-                         '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳'];
-  return circledNumbers[num - 1] || `${num}`;
-};
 
 const ArticleDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -31,8 +24,7 @@ const ArticleDetail: React.FC = () => {
 
       try {
         setLoading(true);
-        // 重置段落计数器
-        paragraphCounter = 0;
+
         const data = await getArticleBySlug(slug);
         if (data) {
           setArticle(data);
@@ -131,7 +123,7 @@ const ArticleDetail: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
-                  <span>{article.metadata.author || 'AI Reporter'}</span>
+                  <span>{article.metadata.author || '像素日报'}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2" />
@@ -154,18 +146,11 @@ const ArticleDetail: React.FC = () => {
           <div className="prose prose-lg max-w-none">
             <ReactMarkdown
               components={{
-                p: ({ children, ...props }) => {
-                  paragraphCounter++;
-                  const circledNumber = getCircledNumber(paragraphCounter);
-                  return (
-                    <p {...props} className="mb-4 leading-relaxed text-gray-700">
-                      <span className="inline-block w-6 h-6 bg-blue-100 text-blue-800 rounded-full text-sm font-medium flex items-center justify-center mr-2 flex-shrink-0">
-                        {circledNumber}
-                      </span>
-                      <span className="inline">{children}</span>
-                    </p>
-                  );
-                },
+                p: ({ children, ...props }) => (
+                  <p {...props} className="mb-4 leading-relaxed text-gray-700">
+                    {children}
+                  </p>
+                ),
                 ul: ({ children, ...props }) => (
                   <ul {...props} className="list-disc list-inside mb-4 text-gray-700 space-y-2">
                     {children}

@@ -35,7 +35,7 @@ function parseFrontmatter(content: string, filename?: string): { metadata: Artic
       metadata: {
         title,
         date,
-        author: 'AI Reporter',
+        author: '像素简报',
         summary,
         tags: [],
         slug: filename ? generateSlug(filename) : ''
@@ -104,7 +104,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
           metadata: {
             title: file.title,
             date: file.date,
-            author: file.author || 'AI Reporter',
+            author: file.author || '像素简报',
             summary: file.summary || '',
             tags: file.tags || [],
             slug: file.slug
@@ -196,7 +196,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
           jsonMetadata = {
             title: fileInfo.title,
             date: fileInfo.date,
-            author: fileInfo.author || 'AI Reporter',
+            author: fileInfo.author || '像素简报',
             summary: fileInfo.summary || '',
             tags: fileInfo.tags || [],
             slug: fileInfo.slug

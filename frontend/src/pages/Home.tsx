@@ -28,11 +28,15 @@ const Home: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\//g, '-');
+  };
+
+  const formatTitle = (date: string) => {
+    return `像素简报-${formatDate(date)}`;
   };
 
   if (loading) {
@@ -68,46 +72,42 @@ const Home: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            AI Reporter
+    <div className="min-h-screen bg-white">
+      {/* 简化的标题区域 */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            像素简报
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Stay updated with the latest developments in artificial intelligence, 
-            technology trends, and industry insights.
+          <p className="text-lg text-gray-600 mb-6">
+            像素看AI，洞见新未来。
           </p>
           <Link
             to="/news"
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
           >
-            View All Articles
-            <svg className="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+            查看所有文章 →
           </Link>
         </div>
       </div>
 
-      {/* Latest Articles */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Latest Articles</h2>
+      {/* 最新文章 */}
+      <div className="max-w-4xl mx-auto px-4 pb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">最新文章</h2>
           <Link
             to="/news"
             className="text-blue-600 hover:text-blue-700 font-medium text-sm"
           >
-            View all →
+            查看全部 →
           </Link>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {articles.map((article) => (
             <article
               key={article.metadata.slug}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -115,8 +115,8 @@ const Home: React.FC = () => {
                     to={`/article/${article.metadata.slug}`}
                     className="block group"
                   >
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {article.metadata.title}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                      {formatTitle(article.metadata.date)}
                     </h3>
                   </Link>
                   
@@ -157,35 +157,13 @@ const Home: React.FC = () => {
         </div>
 
         {articles.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-lg mb-4">📄</div>
-            <p className="text-gray-500">No articles available at the moment.</p>
+          <div className="text-center py-8">
+            <p className="text-gray-500">暂无文章</p>
           </div>
         )}
       </div>
 
-      {/* Newsletter Section */}
-      <div className="bg-blue-50 border-t border-blue-100">
-        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">
-            Stay in the Loop
-          </h3>
-          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Get the latest AI news and insights delivered to your inbox. 
-            Join our community of tech enthusiasts and industry professionals.
-          </p>
-          <div className="max-w-md mx-auto flex gap-3">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 };

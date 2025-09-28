@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import AIReporterLogo from './AIReporterLogo';
+import PixelDailyLogo from './PixelDailyLogo';
 
 export default function Navigation() {
   return (
@@ -8,7 +8,7 @@ export default function Navigation() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="hover:opacity-80 transition-opacity">
-              <AIReporterLogo />
+              <PixelDailyLogo />
             </Link>
           </div>
           <div className="flex items-center space-x-8">
