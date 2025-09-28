@@ -253,8 +253,10 @@ function main() {
         scheduler.addTask(taskName, cronTime, 'npm', ['start']);
     }
     
-    // 每天晚上11点生成报告
-    scheduler.addTask('generate-report', '0 23 * * *', 'npm', ['run', 'generate-report']);
+    // 每天10点、14点、16点生成报告
+    scheduler.addTask('generate-report-10', '0 10 * * *', 'npm', ['run', 'generate-report']);
+    scheduler.addTask('generate-report-14', '0 14 * * *', 'npm', ['run', 'generate-report']);
+    scheduler.addTask('generate-report-16', '0 16 * * *', 'npm', ['run', 'generate-report']);
     
     // 启动调度器
     log('INFO', 'Starting task scheduler...');
