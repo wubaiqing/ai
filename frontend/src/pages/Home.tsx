@@ -35,8 +35,17 @@ const Home: React.FC = () => {
     }).replace(/\//g, '-');
   };
 
+  const formatDateCompact = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\//g, '');
+  };
+
   const formatTitle = (date: string) => {
-    return `像素简报-${formatDate(date)}`;
+    return `AI 简报 ${formatDateCompact(date)}`;
   };
 
   if (loading) {
@@ -84,7 +93,7 @@ const Home: React.FC = () => {
           </p>
           <Link
             to="/news"
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
           >
             查看所有文章 →
           </Link>
@@ -97,7 +106,7 @@ const Home: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-900">最新文章</h2>
           <Link
             to="/news"
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+            className="text-gray-600 hover:text-gray-900 font-medium text-sm"
           >
             查看全部 →
           </Link>
@@ -115,7 +124,7 @@ const Home: React.FC = () => {
                     to={`/article/${article.metadata.slug}`}
                     className="block group"
                   >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-gray-600 transition-colors">
                       {formatTitle(article.metadata.date)}
                     </h3>
                   </Link>

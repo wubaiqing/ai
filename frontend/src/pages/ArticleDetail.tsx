@@ -92,7 +92,7 @@ const ArticleDetail: React.FC = () => {
           </p>
           <Link
             to="/news"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-gray-600 hover:bg-gray-900 transition-colors"
           >
             ← Back to News
           </Link>
@@ -180,7 +180,7 @@ const ArticleDetail: React.FC = () => {
                   <a
                     {...props}
                     href={href}
-                    className="text-blue-600 hover:text-blue-700 underline"
+                    className="text-gray-600 hover:text-gray-900 underline"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -212,7 +212,7 @@ const ArticleDetail: React.FC = () => {
           <div className="mt-8 pt-8 border-t border-gray-200">
             <Link
               to="/news"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-900 transition-colors"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               返回新闻列表

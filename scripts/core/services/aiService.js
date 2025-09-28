@@ -579,17 +579,17 @@ class AIContentService {
 
 - **语言统一**：如果内容是英文或其他语言，请翻译成中文
 - **价值筛选**：确保每条信息都有实际价值，避免重复或无意义的内容
-- **详细描述**：每个条目包含详细描述和准确的消息来源
+- **详细描述**：每个条目包含详细描述和准确的消息来源，消息来源必须包含原始推文的链接
 - **逻辑清晰**：内容层次分明，易于阅读和理解
 
 
 ## 格式示例
 
-① OpenAI 推出 ChatGPT 新功能：Pulse。它会在用户夜间休息时，根据用户的兴趣、关联数据（如日历）、近期聊天记录等信息，主动思考并生成个性化内容，并在第二天早上以资讯卡片的形式推送。Sam Altman 称这是他最喜欢的功能，标志着 ChatGPT 从被动响应向主动、高度个性化服务的未来转变。用户分享越多偏好，Pulse 的表现就越好。消息来源 OpenAI
+① OpenAI 推出 ChatGPT 新功能：Pulse。它会在用户夜间休息时，根据用户的兴趣、关联数据（如日历）、近期聊天记录等信息，主动思考并生成个性化内容，并在第二天早上以资讯卡片的形式推送。Sam Altman 称这是他最喜欢的功能，标志着 ChatGPT 从被动响应向主动、高度个性化服务的未来转变。用户分享越多偏好，Pulse 的表现就越好。消息来源：[OpenAI](https://twitter.com/openai/status/123456789)
 
-② Google。1）发布 Gemini Robotics-ER 1.5 模型，该模型为机器人提供了具体情境推理能力，在多个机器人任务基准测试中达到 SOTA 水平。消息来源 Google DeepMind 2）更新 Gemini 2.5 Flash 和 Flash-Lite 模型，提升智能、成本效益和 Token 效率，并在图像理解、分步解答等方面有所增强。消息来源 GeminiApp 3）Google AI Pro 和 Ultra 订阅用户将获得更高的 Gemini CLI 和 Gemini Code Assist 模型请求额度。消息来源 op7418
+② Google。1）发布 Gemini Robotics-ER 1.5 模型，该模型为机器人提供了具体情境推理能力，在多个机器人任务基准测试中达到 SOTA 水平。消息来源：[Google DeepMind](https://twitter.com/deepmind/status/123456789) 2）更新 Gemini 2.5 Flash 和 Flash-Lite 模型，提升智能、成本效益和 Token 效率，并在图像理解、分步解答等方面有所增强。消息来源：[GeminiApp](https://twitter.com/geminiapp/status/123456789) 3）Google AI Pro 和 Ultra 订阅用户将获得更高的 Gemini CLI 和 Gemini Code Assist 模型请求额度。消息来源：[op7418](https://twitter.com/op7418/status/123456789)
 
-③ Cursor 1.7 版本发布 Plan 模式。Plan 模式会自动将用户输入的指令拆分成多个子任务，并使用不同的模型来完成每个子任务。消息来源
+③ Cursor 1.7 版本发布 Plan 模式。Plan 模式会自动将用户输入的指令拆分成多个子任务，并使用不同的模型来完成每个子任务。消息来源：[Cursor](https://twitter.com/cursor/status/123456789)
 
 
 ## 分组提示
@@ -608,7 +608,7 @@ ${formattedTweets}
 
 ---
 
-**请严格按照上述 Markdown 格式要求生成简报，确保标题层级清晰、列表格式标准、链接格式统一。**`;
+**请严格按照上述 Markdown 格式要求生成简报，确保标题层级清晰、列表格式标准、链接格式统一。特别注意：消息来源必须使用推文数据中提供的实际链接地址，格式为 [来源名称](实际链接地址)。**`;
   }
 
   /**

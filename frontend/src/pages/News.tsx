@@ -61,8 +61,17 @@ const News: React.FC = () => {
     }).replace(/\//g, '-');
   };
 
+  const formatDateCompact = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\//g, '');
+  };
+
   const formatTitle = (date: string) => {
-    return `像素简报-${formatDate(date)}`;
+    return `像素简报 ${formatDateCompact(date)}`;
   };
 
   const getAllTags = () => {
@@ -181,7 +190,7 @@ const News: React.FC = () => {
               <article className="bg-white rounded-lg p-6 border border-gray-200 hover:border-gray-300 transition-all duration-200 hover:shadow-md">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
+                    <h2 className="text-xl font-semibold text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-2 mb-2">
                       {formatTitle(article.metadata.date)}
                     </h2>
                     <p className="text-gray-600 text-sm mb-4" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
@@ -234,7 +243,7 @@ const News: React.FC = () => {
                   setSearchQuery('');
                   setSelectedTag('');
                 }}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-gray-600 hover:text-gray-900 font-medium"
               >
                 清除所有筛选
               </button>
