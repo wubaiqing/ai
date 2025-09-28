@@ -170,8 +170,8 @@ const News: React.FC = () => {
         <div className="space-y-6">
           {filteredArticles.map((article) => (
             <Link
-              key={article.id}
-              to={`/article/${article.id}`}
+              key={article.metadata.slug}
+              to={`/article/${article.metadata.slug}`}
               className="group block"
             >
               <article className="bg-white rounded-lg p-6 border border-gray-200 hover:border-gray-300 transition-all duration-200 hover:shadow-md">
@@ -190,7 +190,7 @@ const News: React.FC = () => {
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1" />
-                      {formatDate(article.metadata.publishedAt)}
+                      {formatDate(article.metadata.date)}
                     </span>
                     <span className="flex items-center">
                       <User className="h-4 w-4 mr-1" />

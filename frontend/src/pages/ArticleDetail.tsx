@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Calendar, User, Clock, ArrowLeft } from 'lucide-react';
 import { Article } from '../types/article';
 import { getArticleBySlug } from '../utils/fileReader';
@@ -119,13 +116,13 @@ const ArticleDetail: React.FC = () => {
           <article className="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
             <header className="mb-8">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                {article.title}
+                {article.metadata.title}
               </h1>
               <div className="flex flex-wrap items-center gap-4 text-gray-600 text-sm">
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <time dateTime={article.publishedAt}>
-                    {new Date(article.publishedAt).toLocaleDateString('zh-CN', {
+                  <time dateTime={article.metadata.date}>
+                    {new Date(article.metadata.date).toLocaleDateString('zh-CN', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -134,16 +131,16 @@ const ArticleDetail: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
-                  <span>{article.author}</span>
+                  <span>{article.metadata.author || 'AI Reporter'}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-2" />
-                  <span>{article.readTime} 分钟阅读</span>
+                  <span>5 分钟阅读</span>
                 </div>
               </div>
-              {article.tags && article.tags.length > 0 && (
+              {article.metadata.tags && article.metadata.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4">
-                  {article.tags.map((tag) => (
+                  {article.metadata.tags.map((tag: string) => (
                     <span
                       key={tag}
                       className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm border border-gray-200"
