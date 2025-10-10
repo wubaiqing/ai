@@ -13,8 +13,8 @@ const Home: React.FC = () => {
       try {
         setLoading(true);
         const data = await getArticles();
-        // 只显示最新的3篇文章
-        setArticles(data.slice(0, 3));
+        // 只显示最新的10篇文章
+        setArticles(data.slice(0, 10));
       } catch (err) {
         setError('Failed to load articles');
         console.error('Error fetching articles:', err);
