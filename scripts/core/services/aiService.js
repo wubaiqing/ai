@@ -79,9 +79,10 @@ class AIContentService {
   initializeService() {
     try {
       const { apiKey, baseUrl, requestTimeout } = applicationConfig.aiService;
+      const normalizedApiKey = (apiKey || '').trim();
       
       // 详细的API密钥验证
-      if (ValidationUtils.isEmptyOrWhitespace(apiKey)) {
+      if (ValidationUtils.isEmptyOrWhitespace(normalizedApiKey)) {
         throw ErrorHandler.createStandardizedError(
           'DEEPSEEK_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
           '1. 访问 https://www.deepseek.com/ 注册账号并获取API密钥\n' +
@@ -92,13 +93,24 @@ class AIContentService {
       }
       
       // 检查是否为占位符
-      if (apiKey === 'your_deepseek_api_key_here') {
+      if (normalizedApiKey === 'your_deepseek_api_key_here') {
         throw ErrorHandler.createStandardizedError(
           'DEEPSEEK_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
           '1. 访问 https://www.deepseek.com/ 获取真实API密钥\n' +
           '2. 替换 .env 文件中的占位符文本\n' +
           '3. 重启应用程序',
           'PLACEHOLDER_API_KEY'
+        );
+      }
+
+      // DeepSeek密钥格式基础校验（一般以 sk- 开头）
+      if (!/^sk-/.test(normalizedApiKey)) {
+        throw ErrorHandler.createStandardizedError(
+          'DEEPSEEK_API_KEY格式看起来不正确（通常以 sk- 开头）。\n\n🔧 排查建议：\n' +
+          '1. 确认复制的密钥完整且无空格/换行\n' +
+          '2. 在终端运行 echo -n $DEEPSEEK_API_KEY | wc -c 查看长度\n' +
+          '3. 重启应用后重试',
+          'INVALID_API_KEY_FORMAT'
         );
       }
       
@@ -114,7 +126,7 @@ class AIContentService {
         baseURL: baseUrl,
         timeout: requestTimeout,
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${normalizedApiKey}`,
           'Content-Type': 'application/json'
         }
       };
@@ -125,8 +137,8 @@ class AIContentService {
       this.isConfigured = true;
       Logger.info('AI服务初始化成功', { 
         baseUrl: baseUrl,
-        hasApiKey: !!apiKey,
-        apiKeyLength: apiKey.length 
+        hasApiKey: !!normalizedApiKey,
+        apiKeyLength: normalizedApiKey.length 
       });
     } catch (error) {
       Logger.error('AI服务初始化失败', { error: error.message });
@@ -184,12 +196,13 @@ class AIContentService {
    */
   createHttpClientWithProxy(targetUrl) {
     const { baseUrl, requestTimeout, apiKey } = applicationConfig.aiService;
+    const normalizedApiKey = (apiKey || '').trim();
     
     const axiosConfig = {
       baseURL: baseUrl,
       timeout: requestTimeout,
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${normalizedApiKey}`,
         'Content-Type': 'application/json'
       }
     };
