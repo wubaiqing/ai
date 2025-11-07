@@ -35,7 +35,7 @@ const applicationConfig = {
     tableName: 'tweets'
   },
 
-  // AI服务配置 - 硅基流动平台DeepSeek
+// AI服务配置 - DeepSeek平台
   aiService: {
     baseUrl: 'https://api.deepseek.com/v1/chat/completions',
     apiKey: process.env.DEEPSEEK_API_KEY || '',
@@ -90,7 +90,7 @@ function validateEnvironmentVariables() {
   const requiredEnvVars = {
     SUPABASE_URL: applicationConfig.database.supabaseUrl,
     SUPABASE_SERVICE_ROLE_KEY: applicationConfig.database.serviceRoleKey,
-    SILICONFLOW_API_KEY: applicationConfig.aiService.apiKey
+  DEEPSEEK_API_KEY: applicationConfig.aiService.apiKey
   };
 
   const missingVars = [];

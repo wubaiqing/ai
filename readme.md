@@ -363,7 +363,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 **AI 服务配置**
 ```bash
 # 硅基流动 API 配置
-SILICONFLOW_API_KEY=your_siliconflow_api_key
+DEEPSEEK_API_KEY=your_deepseek_api_key
 ```
 
 ### 🔧 可选配置
@@ -924,7 +924,7 @@ NODE_ENV=development node scripts/crawl-tweets.js
 解决步骤：
 ```bash
 # 1. 验证 API 密钥
-curl -H "Authorization: Bearer $SILICONFLOW_API_KEY" \
+curl -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
      https://api.siliconflow.cn/v1/models
 
 # 2. 测试 AI 功能

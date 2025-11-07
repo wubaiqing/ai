@@ -88,7 +88,7 @@ function displayApplicationHelp() {
   
 配置:
   请确保已正确配置以下环境变量:
-  - SILICONFLOW_API_KEY: 硅基流动平台API密钥
+  - DEEPSEEK_API_KEY: DeepSeek平台API密钥
   
 输出:
   生成的简报将保存到 outputs/ 目录下

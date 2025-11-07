@@ -83,19 +83,19 @@ class AIContentService {
       // 详细的API密钥验证
       if (ValidationUtils.isEmptyOrWhitespace(apiKey)) {
         throw ErrorHandler.createStandardizedError(
-          'SILICONFLOW_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
-          '1. 访问 https://siliconflow.cn/ 注册账号并获取API密钥\n' +
-          '2. 在 .env 文件中设置 SILICONFLOW_API_KEY=你的真实API密钥\n' +
+          'DEEPSEEK_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
+          '1. 访问 https://www.deepseek.com/ 注册账号并获取API密钥\n' +
+          '2. 在 .env 文件中设置 DEEPSEEK_API_KEY=你的真实API密钥\n' +
           '3. 重启应用程序使环境变量生效',
           'MISSING_API_KEY'
         );
       }
       
       // 检查是否为占位符
-      if (apiKey === 'your_siliconflow_api_key_here') {
+      if (apiKey === 'your_deepseek_api_key_here') {
         throw ErrorHandler.createStandardizedError(
-          'SILICONFLOW_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
-          '1. 访问 https://siliconflow.cn/ 获取真实API密钥\n' +
+          'DEEPSEEK_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
+          '1. 访问 https://www.deepseek.com/ 获取真实API密钥\n' +
           '2. 替换 .env 文件中的占位符文本\n' +
           '3. 重启应用程序',
           'PLACEHOLDER_API_KEY'
@@ -363,20 +363,20 @@ class AIContentService {
         
         // 特殊处理401认证错误
         if (status === 401) {
-          const apiKeyStatus = process.env.SILICONFLOW_API_KEY;
+          const apiKeyStatus = process.env.DEEPSEEK_API_KEY;
           let errorMessage = 'API认证失败 (状态码: 401)';
           
-          if (!apiKeyStatus || apiKeyStatus === 'your_siliconflow_api_key_here') {
+          if (!apiKeyStatus || apiKeyStatus === 'your_deepseek_api_key_here') {
             errorMessage += '\n\n🔧 解决方案：\n' +
-              '1. 访问 https://siliconflow.cn/ 注册账号并获取API密钥\n' +
-              '2. 在 .env 文件中设置 SILICONFLOW_API_KEY=你的真实API密钥\n' +
+              '1. 访问 https://www.deepseek.com/ 注册账号并获取API密钥\n' +
+              '2. 在 .env 文件中设置 DEEPSEEK_API_KEY=你的真实API密钥\n' +
               '3. 确保API密钥不是占位符文本\n' +
               '4. 重启应用程序使环境变量生效';
           } else {
             errorMessage += '\n\n🔧 可能的原因：\n' +
               '1. API密钥已过期或无效\n' +
               '2. API密钥权限不足\n' +
-              '3. 请检查硅基流动平台账户状态';
+              '3. 请检查DeepSeek平台账户状态';
           }
           
           throw ErrorHandler.createStandardizedError(
