@@ -96,8 +96,9 @@ class AIReportGenerator {
       // 3. 预处理和标准化数据
       const normalizedTweetData = this.preprocessAndNormalizeTweetData(tweetData);
       
-      // 4. 生成智能报告内容
-      const intelligentReportContent = await this.generateIntelligentReportContent(normalizedTweetData);
+      // 4. 生成智能报告内容（包含 usage 与成本估算）
+      const aiGenerationResult = await this.generateIntelligentReportContent(normalizedTweetData);
+      const intelligentReportContent = aiGenerationResult.content;
       
       // 5. 保存生成的报告
       const savedFilePath = await this.saveGeneratedReport(intelligentReportContent, {
@@ -106,7 +107,12 @@ class AIReportGenerator {
           tweetsCount: normalizedTweetData.length,
           generationTime: new Date(),
           targetDate: targetDate,
-          dataSource: 'tweets_table'
+          dataSource: 'tweets_table',
+          ai: {
+            model: aiGenerationResult.model,
+            usage: aiGenerationResult.usage,
+            costEstimate: aiGenerationResult.costEstimate
+          }
         }
       });
       
@@ -129,7 +135,12 @@ class AIReportGenerator {
         metadata: {
           tweetsProcessed: normalizedTweetData.length,
           generationDuration: executionSummary.duration,
-          timestamp: TimezoneUtils.getTimestamp()
+          timestamp: TimezoneUtils.getTimestamp(),
+          ai: {
+            model: aiGenerationResult.model,
+            usage: aiGenerationResult.usage,
+            costEstimate: aiGenerationResult.costEstimate
+          }
         }
       };
       
@@ -207,7 +218,8 @@ class AIReportGenerator {
     try {
       Logger.info('开始生成AI简报内容...');
       
-      const intelligentReportContent = await this.aiService.analyzeTweetsAndGenerateReport(processedTweetData);
+      const aiResult = await this.aiService.analyzeTweetsAndGenerateReport(processedTweetData);
+      const intelligentReportContent = aiResult?.content || '';
       
       if (ValidationUtils.isEmptyOrWhitespace(intelligentReportContent)) {
       throw ErrorHandler.createStandardizedError(
@@ -218,7 +230,7 @@ class AIReportGenerator {
       
       Logger.info('AI简报内容生成完成');
       
-      return intelligentReportContent;
+      return aiResult;
     } catch (error) {
       Logger.error('生成简报内容失败', { error: error.message });
       throw error;

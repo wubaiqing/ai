@@ -267,10 +267,16 @@ class AIContentService {
       const requestPayload = this.buildRequestPayload(promptText, options);
       const apiResponse = await this.makeAPIRequest(requestPayload);
       const generatedContent = this.extractContentFromResponse(apiResponse);
+      const usage = this.extractUsageFromResponse(apiResponse);
+      const costEstimate = this.estimateCostFromUsage(usage);
       
       Logger.info('DeepSeek API调用成功，内容生成完成');
       
-      return generatedContent;
+      return {
+        content: generatedContent,
+        usage,
+        costEstimate
+      };
     } catch (error) {
       Logger.error('AI内容生成失败', { error: error.message });
       throw error;
@@ -477,6 +483,80 @@ class AIContentService {
   }
 
   /**
+   * 从响应中提取 token 使用信息
+   * @param {Object} apiResponse
+   * @returns {{promptTokens:number, completionTokens:number, totalTokens:number}} usage
+   */
+  extractUsageFromResponse(apiResponse) {
+    const usage = apiResponse?.usage || {};
+    const promptTokens = Number(usage.prompt_tokens || 0);
+    const completionTokens = Number(usage.completion_tokens || 0);
+    const totalTokens = Number(usage.total_tokens || (promptTokens + completionTokens));
+    // 兼容 DeepSeek 或其他供应商可能的字段名
+    let promptCacheHitTokens = Number(
+      usage.prompt_cache_hit_tokens || usage.cache_hit_tokens || 0
+    );
+    let promptCacheMissTokens = Number(
+      usage.prompt_cache_miss_tokens || usage.cache_miss_tokens || 0
+    );
+
+    // 如果未提供命中/未命中拆分，则默认认为全部为未命中
+    if (promptCacheHitTokens === 0 && promptCacheMissTokens === 0 && promptTokens > 0) {
+      promptCacheMissTokens = promptTokens;
+    }
+
+    // 如果提供的命中/未命中之和不等于 promptTokens，则以 promptTokens 为准进行校正
+    const cacheSum = promptCacheHitTokens + promptCacheMissTokens;
+    if (promptTokens > 0 && cacheSum > 0 && cacheSum !== promptTokens) {
+      // 调整未命中数量以匹配总输入 tokens
+      promptCacheMissTokens = Math.max(0, promptTokens - promptCacheHitTokens);
+    }
+
+    return {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      promptCacheHitTokens,
+      promptCacheMissTokens
+    };
+  }
+
+  /**
+   * 根据使用量估算费用
+   * @param {{promptTokens:number, completionTokens:number}} usage
+   * @returns {{currency:string, amount:number, details:{input:number, output:number}}}
+   */
+  estimateCostFromUsage(usage) {
+    const pricing = applicationConfig.aiService?.pricing || {
+      currency: 'CNY',
+      inputHitPer1K: 0.0002,
+      inputMissPer1K: 0.002,
+      outputPer1K: 0.003
+    };
+
+    // 使用命中/未命中拆分；如果拆分为 0，则将全部输入计为未命中
+    const hitTokens = usage.promptCacheHitTokens || 0;
+    let missTokens = usage.promptCacheMissTokens || 0;
+    if (hitTokens === 0 && missTokens === 0) {
+      missTokens = usage.promptTokens || 0;
+    }
+
+    const inputHitCost = (hitTokens / 1000) * pricing.inputHitPer1K;
+    const inputMissCost = (missTokens / 1000) * pricing.inputMissPer1K;
+    const outputCost = ((usage.completionTokens || 0) / 1000) * pricing.outputPer1K;
+    const amount = Number((inputHitCost + inputMissCost + outputCost).toFixed(6));
+    return {
+      currency: pricing.currency || 'CNY',
+      amount,
+      details: {
+        inputHit: Number(inputHitCost.toFixed(6)),
+        inputMiss: Number(inputMissCost.toFixed(6)),
+        output: Number(outputCost.toFixed(6))
+      }
+    };
+  }
+
+  /**
    * 构建优化的AI提示词
    * 
    * 根据推文数据构建结构化的提示词，优化AI理解和生成效果
@@ -646,11 +726,16 @@ ${formattedTweets}
       Logger.info(`开始分析 ${tweetsData.length} 条推文数据...`);
       
       const analysisPrompt = this.buildTweetAnalysisPrompt(tweetsData);
-      const reportContent = await this.generateContent(analysisPrompt, options);
+      const result = await this.generateContent(analysisPrompt, options);
       
       Logger.info('推文分析和简报生成完成');
       
-      return reportContent;
+      return {
+        content: result.content,
+        usage: result.usage,
+        costEstimate: result.costEstimate,
+        model: applicationConfig.aiService.modelName
+      };
     } catch (error) {
       Logger.error('推文分析失败', { error: error.message });
       throw error;

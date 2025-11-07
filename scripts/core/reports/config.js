@@ -42,7 +42,23 @@ const applicationConfig = {
     modelName: 'deepseek-chat',
     requestTimeout: 300000, // 5分钟超时
     maxTokens: 4096,
-    temperature: 0.7
+    temperature: 0.7,
+    // 价格配置（可通过环境变量覆盖），用于估算本次调用成本
+    pricing: {
+      currency: process.env.DEEPSEEK_PRICE_CURRENCY || 'CNY',
+      // 单价为每 1K tokens 的费用，支持输入缓存命中/未命中
+      inputHitPer1K: parseFloat(
+        process.env.DEEPSEEK_PRICE_INPUT_HIT_PER_1K ||
+        process.env.DEEPSEEK_PRICE_INPUT_PER_1K || // 兼容旧配置键
+        '0.0002'
+      ),
+      inputMissPer1K: parseFloat(
+        process.env.DEEPSEEK_PRICE_INPUT_MISS_PER_1K || '0.002'
+      ),
+      outputPer1K: parseFloat(
+        process.env.DEEPSEEK_PRICE_OUTPUT_PER_1K || '0.003'
+      )
+    }
   },
 
   // 报告输出配置 - 报告文件保存到前端 public/outputs/ 目录
