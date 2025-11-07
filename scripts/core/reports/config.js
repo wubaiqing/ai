@@ -37,9 +37,9 @@ const applicationConfig = {
 
   // AI服务配置 - 硅基流动平台DeepSeek
   aiService: {
-    baseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
-    apiKey: process.env.SILICONFLOW_API_KEY || '',
-    modelName: 'deepseek-ai/DeepSeek-V3.1',
+    baseUrl: 'https://api.deepseek.com/v1/chat/completions',
+    apiKey: process.env.DEEPSEEK_API_KEY || '',
+    modelName: 'deepseek-chat',
     requestTimeout: 300000, // 5分钟超时
     maxTokens: 4096,
     temperature: 0.7
