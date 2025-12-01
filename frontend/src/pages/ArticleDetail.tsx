@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Calendar, User, Clock, ArrowLeft } from 'lucide-react';
 import { Article } from '../types/article';
 import { getArticleBySlug } from '../utils/fileReader';
@@ -145,6 +146,7 @@ const ArticleDetail: React.FC = () => {
             </header>
           <div className="prose prose-lg max-w-none">
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 p: ({ children, ...props }) => (
                   <p {...props} className="mb-4 leading-relaxed text-gray-700">
@@ -180,7 +182,7 @@ const ArticleDetail: React.FC = () => {
                   <a
                     {...props}
                     href={href}
-                    className="text-gray-600 hover:text-gray-900 underline"
+                    className="text-blue-600 hover:text-blue-800 underline"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -201,6 +203,16 @@ const ArticleDetail: React.FC = () => {
                   <pre {...props} className="bg-gray-100 p-4 rounded-lg overflow-x-auto my-4">
                     {children}
                   </pre>
+                ),
+                strong: ({ children, ...props }) => (
+                  <strong {...props} className="font-bold text-gray-900">
+                    {children}
+                  </strong>
+                ),
+                em: ({ children, ...props }) => (
+                  <em {...props} className="italic text-gray-700">
+                    {children}
+                  </em>
                 ),
               }}
             >
