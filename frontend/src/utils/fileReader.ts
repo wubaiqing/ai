@@ -94,7 +94,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
   try {
     // 优先尝试读取 JSON 文件列表
     try {
-      const jsonResponse = await fetch('/outputs/file-list.json');
+      const jsonResponse = await fetch(`/outputs/file-list.json?_t=${Date.now()}`);
       if (jsonResponse.ok) {
         const fileList = await jsonResponse.json();
         console.log('使用 JSON 文件列表获取文章');
@@ -122,7 +122,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
     console.log('使用传统方式获取文章列表');
     
     // 获取 outputs 目录下的所有 markdown 文件
-    const response = await fetch('/outputs/');
+    const response = await fetch(`/outputs/?_t=${Date.now()}`);
     if (!response.ok) {
       // 如果无法获取目录列表，返回已知的文件
       const knownFiles = ['ai-report-2025-01-25.md', 'ai-report-2025-09-25.md', '2025-09-25-ai-tech-brief.md'];
@@ -130,7 +130,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
       
       for (const filename of knownFiles) {
         try {
-          const fileResponse = await fetch(`/outputs/${filename}`);
+          const fileResponse = await fetch(`/outputs/${filename}?_t=${Date.now()}`);
           if (fileResponse.ok) {
             const content = await fileResponse.text();
             const { metadata } = parseFrontmatter(content, filename);
@@ -156,7 +156,7 @@ export async function getArticles(): Promise<ArticleListItem[]> {
     
     for (const filename of knownFiles) {
       try {
-        const fileResponse = await fetch(`/outputs/${filename}`);
+        const fileResponse = await fetch(`/outputs/${filename}?_t=${Date.now()}`);
         if (fileResponse.ok) {
           const content = await fileResponse.text();
           const { metadata } = parseFrontmatter(content, filename);
@@ -188,7 +188,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     // 优先尝试从 JSON 文件中获取元数据
     let jsonMetadata = null;
     try {
-      const jsonResponse = await fetch('/outputs/file-list.json');
+      const jsonResponse = await fetch(`/outputs/file-list.json?_t=${Date.now()}`);
       if (jsonResponse.ok) {
         const fileList = await jsonResponse.json();
         const fileInfo = fileList.files.find((file: any) => file.slug === slug);
@@ -207,7 +207,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
       console.warn('无法读取 JSON 元数据:', jsonError);
     }
     
-    const response = await fetch(`/outputs/${filename}`);
+    const response = await fetch(`/outputs/${filename}?_t=${Date.now()}`);
     
     if (!response.ok) {
       return null;
