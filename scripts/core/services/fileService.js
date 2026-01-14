@@ -130,7 +130,8 @@ class FileOperationService {
     }
     
     const reportGenerationTimestamp = new Date();
-    const formattedReportDate = TimeUtils.formatDateToLocalizedString(reportGenerationTimestamp);
+    const reportDate = reportMetadata.targetDate ? new Date(reportMetadata.targetDate + 'T00:00:00.000Z') : reportGenerationTimestamp;
+    const formattedReportDate = TimeUtils.formatDateToLocalizedString(reportDate);
     const formattedGenerationDateTime = TimeUtils.formatDateTimeToLocalizedString(reportGenerationTimestamp);
     
     // 文档标题
@@ -232,8 +233,12 @@ class FileOperationService {
       // 生成文件路径，传入目标日期
       const reportFilePath = saveOptions.customPath || getReportFilePath(saveOptions.targetDate);
       
-      // 生成完整的报告内容
-      const completeReportContent = this.generateFormattedReportContent(reportContentData, saveOptions.metadata);
+      // 生成完整的报告内容，传入目标日期
+      const metadataWithDate = {
+        ...saveOptions.metadata,
+        targetDate: saveOptions.targetDate
+      };
+      const completeReportContent = this.generateFormattedReportContent(reportContentData, metadataWithDate);
       
       // 写入文件
       await fs.writeFile(reportFilePath, completeReportContent, this.encoding);
@@ -524,6 +529,10 @@ class FileOperationService {
         try {
           const fileStats = await fs.stat(fileInfo.fullPath);
           
+          // 从文件名中提取日期（文件名格式：YYYY-MM-DD-ai-tech-brief.md）
+          const dateMatch = fileInfo.fileName.match(/^(\d{4}-\d{2}-\d{2})-/);
+          const fileDate = dateMatch ? dateMatch[1] : fileStats.mtime.toISOString().split('T')[0];
+          
           // 读取文件内容以提取标题
           let title = fileInfo.baseName;
           try {
@@ -539,7 +548,7 @@ class FileOperationService {
           fileList.push({
             filename: fileInfo.fileName,
             title: title,
-            date: fileStats.mtime.toISOString().split('T')[0],
+            date: fileDate,
             path: `/outputs/${fileInfo.fileName}`,
             size: fileStats.size,
             lastModified: fileStats.mtime.toISOString(),
