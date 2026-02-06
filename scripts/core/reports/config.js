@@ -35,30 +35,14 @@ const applicationConfig = {
     tableName: 'tweets'
   },
 
-// AI服务配置 - DeepSeek平台
+// AI服务配置 - Zenmux.ai 平台（支持多种模型）
   aiService: {
-    baseUrl: 'https://api.deepseek.com/v1/chat/completions',
-    apiKey: process.env.DEEPSEEK_API_KEY || '',
-    modelName: 'deepseek-chat',
+    baseUrl: process.env.AI_API_BASE_URL || 'https://zenmux.ai/api/v1/chat/completions',
+    apiKey: process.env.AI_API_KEY || '',
+    modelName: process.env.AI_MODEL_NAME || 'openai/gpt-5.2',
     requestTimeout: 300000, // 5分钟超时
     maxTokens: 4096,
-    temperature: 0.7,
-    // 价格配置（可通过环境变量覆盖），用于估算本次调用成本
-    pricing: {
-      currency: process.env.DEEPSEEK_PRICE_CURRENCY || 'CNY',
-      // 单价为每 1K tokens 的费用，支持输入缓存命中/未命中
-      inputHitPer1K: parseFloat(
-        process.env.DEEPSEEK_PRICE_INPUT_HIT_PER_1K ||
-        process.env.DEEPSEEK_PRICE_INPUT_PER_1K || // 兼容旧配置键
-        '0.0002'
-      ),
-      inputMissPer1K: parseFloat(
-        process.env.DEEPSEEK_PRICE_INPUT_MISS_PER_1K || '0.002'
-      ),
-      outputPer1K: parseFloat(
-        process.env.DEEPSEEK_PRICE_OUTPUT_PER_1K || '0.003'
-      )
-    }
+    temperature: 0.7
   },
 
   // 报告输出配置 - 报告文件保存到前端 public/outputs/ 目录
@@ -106,7 +90,7 @@ function validateEnvironmentVariables() {
   const requiredEnvVars = {
     SUPABASE_URL: applicationConfig.database.supabaseUrl,
     SUPABASE_SERVICE_ROLE_KEY: applicationConfig.database.serviceRoleKey,
-  DEEPSEEK_API_KEY: applicationConfig.aiService.apiKey
+    AI_API_KEY: applicationConfig.aiService.apiKey
   };
 
   const missingVars = [];

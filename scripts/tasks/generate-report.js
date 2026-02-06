@@ -39,17 +39,6 @@ async function executeAIReportGeneration(options = {}) {
       Logger.info(`📊 处理推文数量: ${generationResult.metadata.tweetsProcessed}`);
       Logger.info(`⏱️  生成耗时: ${generationResult.summary.duration}`);
       
-      // 打印 AI 使用量与费用估算
-      const aiMeta = generationResult.metadata?.ai;
-      if (aiMeta?.usage) {
-        const { promptTokens, completionTokens, totalTokens, promptCacheHitTokens, promptCacheMissTokens } = aiMeta.usage;
-        Logger.info(`🔢 Token用量: 输入 ${promptTokens}（命中 ${promptCacheHitTokens}，未命中 ${promptCacheMissTokens}），输出 ${completionTokens}，合计 ${totalTokens}`);
-      }
-      if (aiMeta?.costEstimate) {
-        const { amount, currency, details } = aiMeta.costEstimate;
-        Logger.info(`💰 费用估算: ${amount} ${currency}（输入命中 ${details.inputHit} + 输入未命中 ${details.inputMiss} + 输出 ${details.output}）`);
-      }
-      
       if (options.showContent) {
         Logger.info('\n=== 生成的简报内容 ===');
         Logger.info(generationResult.reportContent);

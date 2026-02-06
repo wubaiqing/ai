@@ -96,10 +96,10 @@ class AIReportGenerator {
       // 3. 预处理和标准化数据
       const normalizedTweetData = this.preprocessAndNormalizeTweetData(tweetData);
       
-      // 4. 生成智能报告内容（包含 usage 与成本估算）
+      // 4. 生成智能报告内容
       const aiGenerationResult = await this.generateIntelligentReportContent(normalizedTweetData);
       const intelligentReportContent = aiGenerationResult.content;
-      
+
       // 5. 保存生成的报告
       const savedFilePath = await this.saveGeneratedReport(intelligentReportContent, {
         targetDate: targetDate,
@@ -109,9 +109,7 @@ class AIReportGenerator {
           targetDate: targetDate,
           dataSource: 'tweets_table',
           ai: {
-            model: aiGenerationResult.model,
-            usage: aiGenerationResult.usage,
-            costEstimate: aiGenerationResult.costEstimate
+            model: aiGenerationResult.model
           }
         }
       });
@@ -137,9 +135,7 @@ class AIReportGenerator {
           generationDuration: executionSummary.duration,
           timestamp: TimezoneUtils.getTimestamp(),
           ai: {
-            model: aiGenerationResult.model,
-            usage: aiGenerationResult.usage,
-            costEstimate: aiGenerationResult.costEstimate
+            model: aiGenerationResult.model
           }
         }
       };

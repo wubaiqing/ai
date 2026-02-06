@@ -84,31 +84,31 @@ class AIContentService {
       // 详细的API密钥验证
       if (ValidationUtils.isEmptyOrWhitespace(normalizedApiKey)) {
         throw ErrorHandler.createStandardizedError(
-          'DEEPSEEK_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
-          '1. 访问 https://www.deepseek.com/ 注册账号并获取API密钥\n' +
-          '2. 在 .env 文件中设置 DEEPSEEK_API_KEY=你的真实API密钥\n' +
+          'AI_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
+          '1. 访问 https://zenmux.ai/ 获取API密钥\n' +
+          '2. 在 .env 文件中设置 AI_API_KEY=你的真实API密钥\n' +
           '3. 重启应用程序使环境变量生效',
           'MISSING_API_KEY'
         );
       }
-      
+
       // 检查是否为占位符
-      if (normalizedApiKey === 'your_deepseek_api_key_here') {
+      if (normalizedApiKey === 'your_ai_api_key_here' || normalizedApiKey === 'your_deepseek_api_key_here') {
         throw ErrorHandler.createStandardizedError(
-          'DEEPSEEK_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
-          '1. 访问 https://www.deepseek.com/ 获取真实API密钥\n' +
+          'AI_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
+          '1. 访问 https://zenmux.ai/ 获取真实API密钥\n' +
           '2. 替换 .env 文件中的占位符文本\n' +
           '3. 重启应用程序',
           'PLACEHOLDER_API_KEY'
         );
       }
 
-      // DeepSeek密钥格式基础校验（一般以 sk- 开头）
+      // API密钥格式基础校验（一般以 sk- 开头）
       if (!/^sk-/.test(normalizedApiKey)) {
         throw ErrorHandler.createStandardizedError(
-          'DEEPSEEK_API_KEY格式看起来不正确（通常以 sk- 开头）。\n\n🔧 排查建议：\n' +
+          'AI_API_KEY格式看起来不正确（通常以 sk- 开头）。\n\n🔧 排查建议：\n' +
           '1. 确认复制的密钥完整且无空格/换行\n' +
-          '2. 在终端运行 echo -n $DEEPSEEK_API_KEY | wc -c 查看长度\n' +
+          '2. 在终端运行 echo -n $AI_API_KEY | wc -c 查看长度\n' +
           '3. 重启应用后重试',
           'INVALID_API_KEY_FORMAT'
         );
@@ -262,20 +262,16 @@ class AIContentService {
       throw ErrorHandler.createStandardizedError('提示词不能为空', 'EMPTY_PROMPT');
       }
       
-      Logger.info('开始调用DeepSeek API生成内容...');
+      Logger.info('开始调用AI API生成内容...', { model: applicationConfig.aiService.modelName });
       
       const requestPayload = this.buildRequestPayload(promptText, options);
       const apiResponse = await this.makeAPIRequest(requestPayload);
       const generatedContent = this.extractContentFromResponse(apiResponse);
-      const usage = this.extractUsageFromResponse(apiResponse);
-      const costEstimate = this.estimateCostFromUsage(usage);
-      
-      Logger.info('DeepSeek API调用成功，内容生成完成');
-      
+
+      Logger.info('AI API调用成功，内容生成完成');
+
       return {
-        content: generatedContent,
-        usage,
-        costEstimate
+        content: generatedContent
       };
     } catch (error) {
       Logger.error('AI内容生成失败', { error: error.message });
@@ -382,20 +378,20 @@ class AIContentService {
         
         // 特殊处理401认证错误
         if (status === 401) {
-          const apiKeyStatus = process.env.DEEPSEEK_API_KEY;
+          const apiKeyStatus = applicationConfig.aiService.apiKey;
           let errorMessage = 'API认证失败 (状态码: 401)';
-          
-          if (!apiKeyStatus || apiKeyStatus === 'your_deepseek_api_key_here') {
+
+          if (!apiKeyStatus || apiKeyStatus === 'your_ai_api_key_here' || apiKeyStatus === 'your_deepseek_api_key_here') {
             errorMessage += '\n\n🔧 解决方案：\n' +
-              '1. 访问 https://www.deepseek.com/ 注册账号并获取API密钥\n' +
-              '2. 在 .env 文件中设置 DEEPSEEK_API_KEY=你的真实API密钥\n' +
+              '1. 访问 https://zenmux.ai/ 获取API密钥\n' +
+              '2. 在 .env 文件中设置 AI_API_KEY=你的真实API密钥\n' +
               '3. 确保API密钥不是占位符文本\n' +
               '4. 重启应用程序使环境变量生效';
           } else {
             errorMessage += '\n\n🔧 可能的原因：\n' +
               '1. API密钥已过期或无效\n' +
               '2. API密钥权限不足\n' +
-              '3. 请检查DeepSeek平台账户状态';
+              '3. 请检查 Zenmux.ai 平台账户状态和余额';
           }
           
           throw ErrorHandler.createStandardizedError(
@@ -482,79 +478,6 @@ class AIContentService {
     return firstChoice.message.content.trim();
   }
 
-  /**
-   * 从响应中提取 token 使用信息
-   * @param {Object} apiResponse
-   * @returns {{promptTokens:number, completionTokens:number, totalTokens:number}} usage
-   */
-  extractUsageFromResponse(apiResponse) {
-    const usage = apiResponse?.usage || {};
-    const promptTokens = Number(usage.prompt_tokens || 0);
-    const completionTokens = Number(usage.completion_tokens || 0);
-    const totalTokens = Number(usage.total_tokens || (promptTokens + completionTokens));
-    // 兼容 DeepSeek 或其他供应商可能的字段名
-    let promptCacheHitTokens = Number(
-      usage.prompt_cache_hit_tokens || usage.cache_hit_tokens || 0
-    );
-    let promptCacheMissTokens = Number(
-      usage.prompt_cache_miss_tokens || usage.cache_miss_tokens || 0
-    );
-
-    // 如果未提供命中/未命中拆分，则默认认为全部为未命中
-    if (promptCacheHitTokens === 0 && promptCacheMissTokens === 0 && promptTokens > 0) {
-      promptCacheMissTokens = promptTokens;
-    }
-
-    // 如果提供的命中/未命中之和不等于 promptTokens，则以 promptTokens 为准进行校正
-    const cacheSum = promptCacheHitTokens + promptCacheMissTokens;
-    if (promptTokens > 0 && cacheSum > 0 && cacheSum !== promptTokens) {
-      // 调整未命中数量以匹配总输入 tokens
-      promptCacheMissTokens = Math.max(0, promptTokens - promptCacheHitTokens);
-    }
-
-    return {
-      promptTokens,
-      completionTokens,
-      totalTokens,
-      promptCacheHitTokens,
-      promptCacheMissTokens
-    };
-  }
-
-  /**
-   * 根据使用量估算费用
-   * @param {{promptTokens:number, completionTokens:number}} usage
-   * @returns {{currency:string, amount:number, details:{input:number, output:number}}}
-   */
-  estimateCostFromUsage(usage) {
-    const pricing = applicationConfig.aiService?.pricing || {
-      currency: 'CNY',
-      inputHitPer1K: 0.0002,
-      inputMissPer1K: 0.002,
-      outputPer1K: 0.003
-    };
-
-    // 使用命中/未命中拆分；如果拆分为 0，则将全部输入计为未命中
-    const hitTokens = usage.promptCacheHitTokens || 0;
-    let missTokens = usage.promptCacheMissTokens || 0;
-    if (hitTokens === 0 && missTokens === 0) {
-      missTokens = usage.promptTokens || 0;
-    }
-
-    const inputHitCost = (hitTokens / 1000) * pricing.inputHitPer1K;
-    const inputMissCost = (missTokens / 1000) * pricing.inputMissPer1K;
-    const outputCost = ((usage.completionTokens || 0) / 1000) * pricing.outputPer1K;
-    const amount = Number((inputHitCost + inputMissCost + outputCost).toFixed(6));
-    return {
-      currency: pricing.currency || 'CNY',
-      amount,
-      details: {
-        inputHit: Number(inputHitCost.toFixed(6)),
-        inputMiss: Number(inputMissCost.toFixed(6)),
-        output: Number(outputCost.toFixed(6))
-      }
-    };
-  }
 
   /**
    * 构建优化的AI提示词
@@ -727,13 +650,11 @@ ${formattedTweets}
       
       const analysisPrompt = this.buildTweetAnalysisPrompt(tweetsData);
       const result = await this.generateContent(analysisPrompt, options);
-      
+
       Logger.info('推文分析和简报生成完成');
-      
+
       return {
         content: result.content,
-        usage: result.usage,
-        costEstimate: result.costEstimate,
         model: applicationConfig.aiService.modelName
       };
     } catch (error) {
