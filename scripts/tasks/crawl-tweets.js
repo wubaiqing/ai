@@ -15,6 +15,7 @@ const APPLICATION_CONFIG = require("../core/lib/config.js");
 const { Logger } = require("../core/lib/utils");
 const { TimezoneUtils } = require("../core/lib/timezone");
 const { handleCookieConsentWithRetry } = require("../core/lib/cookieConsent");
+const ProxyValidator = require("../core/lib/proxyValidator");
 
 const CONFIG = {
   CHROME_EXECUTABLE_PATH: process.env.CHROME_EXECUTABLE_PATH || "/usr/bin/chromium",
@@ -24,7 +25,112 @@ const CONFIG = {
   CONSECUTIVE_EMPTY_SCROLL_LIMIT: 5,
   SCROLL_HEIGHT: [300, 600],
   SCROLL_DELAY: [1500, 2500],
+  DEBUG_OUTPUT_DIR: process.env.CRAWL_DEBUG_OUTPUT_DIR || path.resolve(__dirname, "..", "..", "outputs", "crawl-debug"),
 };
+
+function getCompactTimestamp() {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function ensureDebugDirectory() {
+  if (!fs.existsSync(CONFIG.DEBUG_OUTPUT_DIR)) {
+    fs.mkdirSync(CONFIG.DEBUG_OUTPUT_DIR, { recursive: true });
+  }
+}
+
+async function runProxyPreflightCheck() {
+  if (!process.env.PROXY_HOST) {
+    Logger.info("未配置代理，跳过代理预检查");
+    return;
+  }
+
+  const validator = new ProxyValidator(Logger);
+  Logger.info("开始执行代理预检查...");
+
+  const validationResult = await validator.validateProxy({
+    verbose: true,
+    testUrl: "https://x.com/home",
+    timeout: 15000,
+  });
+
+  if (!validationResult.success) {
+    const suggestions = validator.getSuggestions(validationResult);
+    const tipMessage = suggestions.length > 0 ? `建议: ${suggestions.join("；")}` : "建议: 检查代理服务可用性";
+    throw new Error(`代理预检查失败，阶段: ${validationResult.stage}，错误: ${validationResult.error || "未知错误"}。${tipMessage}`);
+  }
+
+  Logger.info("代理预检查通过");
+}
+
+async function savePageDiagnostics(page, context = {}) {
+  const { stage = "unknown-stage", errorMessage = "unknown-error", targetUrl = "" } = context;
+  ensureDebugDirectory();
+
+  const diagnosticsId = `${stage}-${getCompactTimestamp()}`;
+  const basePath = path.join(CONFIG.DEBUG_OUTPUT_DIR, diagnosticsId);
+  const htmlPath = `${basePath}.html`;
+  const screenshotPath = `${basePath}.png`;
+  const summaryPath = `${basePath}.json`;
+
+  const summary = {
+    stage,
+    errorMessage,
+    targetUrl,
+    timestamp: new Date().toISOString(),
+    userAgent: APPLICATION_CONFIG.getUserAgent(),
+    proxyHost: process.env.PROXY_HOST || null,
+    proxyPort: process.env.PROXY_PORT || null,
+    currentUrl: null,
+    title: null,
+    readyState: null,
+    bodyTextPreview: null,
+    bodyChildCount: null,
+    htmlSaved: false,
+    screenshotSaved: false,
+  };
+
+  if (!page || page.isClosed()) {
+    fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2), "utf-8");
+    Logger.warn(`页面不可用，已保存基础诊断信息: ${summaryPath}`);
+    return summaryPath;
+  }
+
+  try {
+    summary.currentUrl = page.url();
+    summary.title = await page.title();
+    const pageSnapshot = await page.evaluate(() => ({
+      readyState: document.readyState,
+      bodyTextPreview: document.body ? document.body.innerText.slice(0, 1000) : "",
+      bodyChildCount: document.body ? document.body.children.length : 0,
+    }));
+    summary.readyState = pageSnapshot.readyState;
+    summary.bodyTextPreview = pageSnapshot.bodyTextPreview;
+    summary.bodyChildCount = pageSnapshot.bodyChildCount;
+
+    const htmlContent = await page.content();
+    fs.writeFileSync(htmlPath, htmlContent, "utf-8");
+    summary.htmlSaved = true;
+
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    summary.screenshotSaved = true;
+  } catch (diagnosticsError) {
+    summary.diagnosticsError = diagnosticsError.message;
+    Logger.warn(`保存页面诊断信息时出错: ${diagnosticsError.message}`);
+  }
+
+  fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2), "utf-8");
+
+  Logger.warn(`页面诊断文件已保存: ${summaryPath}`);
+  if (summary.htmlSaved) {
+    Logger.warn(`页面HTML已保存: ${htmlPath}`);
+  }
+  if (summary.screenshotSaved) {
+    Logger.warn(`页面截图已保存: ${screenshotPath}`);
+  }
+  Logger.warn(`页面摘要: url=${summary.currentUrl || "N/A"}, title=${summary.title || "N/A"}, readyState=${summary.readyState || "N/A"}, bodyChildCount=${summary.bodyChildCount || 0}`);
+
+  return summaryPath;
+}
 
 /**
  * 处理"显示更多"按钮的点击操作
@@ -200,6 +306,7 @@ async function scrapeTwitterListWithAuthentication(
 
   const targetUrl = `https://x.com/i/lists/${listId}`;
   Logger.info(`开始爬取推特列表: ${listId}`);
+  await runProxyPreflightCheck();
 
   // 群辉NAS Docker环境优化配置
   const launchOptions = {
@@ -242,6 +349,7 @@ async function scrapeTwitterListWithAuthentication(
   await new Promise(resolve => setTimeout(resolve, 2000));
   
   const browser = await createBrowserWithRetry(launchOptions);
+  let page = null;
   
   // 额外的连接稳定性检查
   Logger.info('执行连接稳定性检查...');
@@ -262,7 +370,7 @@ async function scrapeTwitterListWithAuthentication(
       second: '2-digit',
       hour12: false
     }).replace(/\//g, '-')}] [PAGE-CREATE] 正在创建页面实例...`);
-  const page = await createPageWithErrorHandling(browser);
+  page = await createPageWithErrorHandling(browser);
   console.log(`[${TimezoneUtils.getTimestamp()}] [PAGE-SUCCESS] 页面实例创建成功`);
   
   // 页面创建后稳定性检查
@@ -304,6 +412,7 @@ async function scrapeTwitterListWithAuthentication(
     
     // 使用重试机制访问页面
     let navigationSuccess = false;
+    let lastNavigationError = null;
     for (let attempt = 0; attempt < RETRY_CONFIG.MAX_RETRIES; attempt++) {
       try {
         // 检查页面是否仍然连接
@@ -318,12 +427,16 @@ async function scrapeTwitterListWithAuthentication(
         navigationSuccess = true;
         break;
       } catch (error) {
+        lastNavigationError = error;
         const isProtocolError = error.message.includes('Protocol error') || 
                                error.message.includes('Target closed') ||
                                error.message.includes('Target.setAutoAttach') ||
                                error.message.includes('Target.setDiscoverTargets');
+        const isConnectionClosed = error.message.includes("net::ERR_CONNECTION_CLOSED");
         
-        if (isProtocolError) {
+        if (isConnectionClosed) {
+          Logger.warn(`页面导航连接关闭 (第${attempt + 1}次): ${error.message}`);
+        } else if (isProtocolError) {
           Logger.warn(`页面导航协议错误 (第${attempt + 1}次): ${error.message}`);
         } else {
           Logger.warn(`页面导航失败 (第${attempt + 1}次): ${error.message}`);
@@ -338,6 +451,11 @@ async function scrapeTwitterListWithAuthentication(
     }
     
     if (!navigationSuccess) {
+      await savePageDiagnostics(page, {
+        stage: "navigation-failed",
+        errorMessage: lastNavigationError ? lastNavigationError.message : `页面导航失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`,
+        targetUrl,
+      });
       throw new Error(`页面导航失败，已重试 ${RETRY_CONFIG.MAX_RETRIES} 次`);
     }
 
@@ -523,6 +641,11 @@ async function scrapeTwitterListWithAuthentication(
     return collectedTweets;
   } catch (error) {
     Logger.error("爬取过程中发生错误:", { error: error.message });
+    await savePageDiagnostics(page, {
+      stage: "crawl-error",
+      errorMessage: error.message,
+      targetUrl,
+    });
     
     // 检查是否是Target closed错误
     if (error.message.includes('Target closed') || error.message.includes('Protocol error')) {
