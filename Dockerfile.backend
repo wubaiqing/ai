@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
     libdrm2 \
     libgbm1 \
     chromium \
+    curl \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置时区
