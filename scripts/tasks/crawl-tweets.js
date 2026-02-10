@@ -45,7 +45,10 @@ async function runProxyPreflightCheck() {
   }
 
   const validator = new ProxyValidator(Logger);
+  const proxyUrl = validator.buildProxyUrl();
+  const maskedProxyUrl = proxyUrl.replace(/:([^:@]+)@/, ":***@");
   Logger.info("开始执行代理预检查...");
+  Logger.info(`代理预检查目标: ${maskedProxyUrl}`);
 
   const validationResult = await validator.validateProxy({
     verbose: true,
@@ -56,10 +59,10 @@ async function runProxyPreflightCheck() {
   if (!validationResult.success) {
     const suggestions = validator.getSuggestions(validationResult);
     const tipMessage = suggestions.length > 0 ? `建议: ${suggestions.join("；")}` : "建议: 检查代理服务可用性";
-    throw new Error(`代理预检查失败，阶段: ${validationResult.stage}，错误: ${validationResult.error || "未知错误"}。${tipMessage}`);
+    throw new Error(`代理预检查失败，代理: ${maskedProxyUrl}，阶段: ${validationResult.stage}，错误: ${validationResult.error || "未知错误"}。${tipMessage}`);
   }
 
-  Logger.info("代理预检查通过");
+  Logger.info(`代理预检查通过: ${maskedProxyUrl}`);
 }
 
 async function savePageDiagnostics(page, context = {}) {
