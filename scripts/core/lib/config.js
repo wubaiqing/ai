@@ -6,6 +6,7 @@
 
 require('dotenv').config();
 const path = require('path');
+const { spawnSync } = require('child_process');
 const Logger = require('./utils').Logger;
 
 /**
@@ -19,6 +20,7 @@ class ApplicationConfiguration {
    */
   constructor() {
     Logger.info('[配置] 开始初始化应用配置');
+    this.cachedChromiumMajorVersion = null;
     this.validateRequiredEnvironmentVariables();
     Logger.info('[配置] 应用配置初始化完成');
   }
@@ -115,8 +117,18 @@ class ApplicationConfiguration {
    * 统一管理所有浏览器实例使用的UserAgent
    */
   getUserAgent() {
-    const defaultUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    return process.env.USER_AGENT || defaultUserAgent;
+    // 允许通过环境变量强制覆盖User-Agent
+    if (process.env.USER_AGENT) {
+      return process.env.USER_AGENT;
+    }
+
+    const chromiumMajorVersion = this.getChromiumMajorVersion() || '120';
+
+    if (process.platform === 'linux') {
+      return `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromiumMajorVersion}.0.0.0 Safari/537.36`;
+    }
+
+    return `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromiumMajorVersion}.0.0.0 Safari/537.36`;
   }
 
   /**
@@ -130,6 +142,54 @@ class ApplicationConfiguration {
       : process.env.CHROME_EXECUTABLE_PATH;
     
     return process.env.CHROME_EXECUTABLE_PATH || defaultPath;
+  }
+
+  /**
+   * 获取Chromium主版本号（带缓存）
+   * @returns {string|null} 主版本号字符串
+   */
+  getChromiumMajorVersion() {
+    if (this.cachedChromiumMajorVersion) {
+      return this.cachedChromiumMajorVersion;
+    }
+
+    if (process.env.CHROME_MAJOR_VERSION) {
+      this.cachedChromiumMajorVersion = process.env.CHROME_MAJOR_VERSION;
+      return this.cachedChromiumMajorVersion;
+    }
+
+    const executablePath = this.getChromeExecutablePath();
+    if (!executablePath) {
+      Logger.warn('[配置] 未找到Chrome可执行路径，使用默认UA版本');
+      return null;
+    }
+
+    try {
+      const detectionResult = spawnSync(executablePath, ['--version'], {
+        encoding: 'utf-8',
+        timeout: 3000
+      });
+
+      if (detectionResult.error) {
+        Logger.warn(`[配置] Chromium版本检测失败: ${detectionResult.error.message}`);
+        return null;
+      }
+
+      const versionOutput = `${detectionResult.stdout || ''} ${detectionResult.stderr || ''}`.trim();
+      const versionMatch = versionOutput.match(/(\d+)\.\d+\.\d+\.\d+/);
+
+      if (!versionMatch) {
+        Logger.warn(`[配置] 未能从输出中解析Chromium版本: ${versionOutput}`);
+        return null;
+      }
+
+      this.cachedChromiumMajorVersion = versionMatch[1];
+      Logger.info(`[配置] 检测到Chromium主版本: ${this.cachedChromiumMajorVersion}`);
+      return this.cachedChromiumMajorVersion;
+    } catch (error) {
+      Logger.warn(`[配置] Chromium版本检测异常: ${error.message}`);
+      return null;
+    }
   }
 
   /**
