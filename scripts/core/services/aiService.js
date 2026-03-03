@@ -292,15 +292,24 @@ class AIContentService {
       maxTokens,
       temperature
     } = applicationConfig.aiService;
+
+    const messages = [];
+
+    if (!ValidationUtils.isEmptyOrWhitespace(options.systemPrompt)) {
+      messages.push({
+        role: 'system',
+        content: options.systemPrompt
+      });
+    }
+
+    messages.push({
+      role: 'user',
+      content: promptText
+    });
     
     return {
       model: options.model || modelName,
-      messages: [
-        {
-          role: 'user',
-          content: promptText
-        }
-      ],
+      messages,
       temperature: options.temperature || temperature,
       max_tokens: options.maxTokens || maxTokens,
       ...options.additionalParams
@@ -548,7 +557,7 @@ class AIContentService {
     return foundKeywords;
   }
 
-  buildTweetAnalysisPrompt(tweetsData) {
+  buildTweetAnalysisPromptParts(tweetsData) {
     if (ValidationUtils.isEmptyOrInvalidArray(tweetsData)) {
       throw ErrorHandler.createStandardizedError('推文数据不能为空', 'EMPTY_TWEETS_DATA');
     }
@@ -566,7 +575,7 @@ class AIContentService {
     
     const categoriesText = contentCategories.join('、');
     
-    return `请分析以下推文数据，提取有价值的科技资讯信息，生成一份使用带圆圈数字编号格式的中文简报。
+    const systemPrompt = `请分析用户提供的推文数据，提取有价值的科技资讯信息，生成一份使用带圆圈数字编号格式的中文简报。
 
 ## 分析要求
 
@@ -601,11 +610,13 @@ class AIContentService {
 
 ## 格式示例
 
-① OpenAI 推出 ChatGPT 新功能：Pulse。它会在用户夜间休息时，根据用户的兴趣、关联数据（如日历）、近期聊天记录等信息，主动思考并生成个性化内容，并在第二天早上以资讯卡片的形式推送。Sam Altman 称这是他最喜欢的功能，标志着 ChatGPT 从被动响应向主动、高度个性化服务的未来转变。用户分享越多偏好，Pulse 的表现就越好。消息来源：[OpenAI](https://twitter.com/openai/status/123456789)
+① Claude（Anthropic）向免费用户开放「Memory/记忆」能力，并强化记忆导入/导出与数据迁移体验：用户可在 Settings → Memory 开启；免费版现在也能使用记忆功能，并可更方便地导入已保存记忆，且支持随时导出。消息来源：[ClaudeAI（开启入口提示）](https://x.com/claudeai/status/2028559429751513345) [ClaudeAI（免费版开放与导入导出）](https://x.com/claudeai/status/2028559427167834314) [aigclink（数据迁移开放给免费用户）](https://x.com/aigclink/status/2028612894401913306)
 
-② Google。1）发布 Gemini Robotics-ER 1.5 模型，该模型为机器人提供了具体情境推理能力，在多个机器人任务基准测试中达到 SOTA 水平。消息来源：[Google DeepMind](https://twitter.com/deepmind/status/123456789) 2）更新 Gemini 2.5 Flash 和 Flash-Lite 模型，提升智能、成本效益和 Token 效率，并在图像理解、分步解答等方面有所增强。消息来源：[GeminiApp](https://twitter.com/geminiapp/status/123456789) 3）Google AI Pro 和 Ultra 订阅用户将获得更高的 Gemini CLI 和 Gemini Code Assist 模型请求额度。消息来源：[op7418](https://twitter.com/op7418/status/123456789)
+② Meta AI（美国内部测试）切入 AI 购物/电商能力，并被曝部分请求在底层路由到 Gemini 模型：这意味着 Meta 可能加入与 OpenAI、Microsoft、Google、Perplexity 等的「AI+电商」竞争；同时也反映出大厂在模型层面进行多模型/外部模型调用的工程实践。消息来源：[TestingCatalog（AI 购物功能内测）](https://x.com/testingcatalog/status/2028503759857271242) [TestingCatalog（请求路由到 Gemini）](https://x.com/testingcatalog/status/2028503762437071110)
 
-③ Cursor 1.7 版本发布 Plan 模式。Plan 模式会自动将用户输入的指令拆分成多个子任务，并使用不同的模型来完成每个子任务。消息来源：[Cursor](https://twitter.com/cursor/status/123456789)
+③ Google Gemini 动态：Gemini 3 Pro 下线计划与「Projects」功能再现企业版。1）Gemini 3 Pro 将于下周一（3/9）关闭，官方建议升级到 Gemini 3.1 Pro Preview（称对早期版本反馈点有改进）。2）Gemini Enterprise 被发现正在测试/开发「Projects」功能（是否进入消费者版本未知），用于项目化组织与管理。消息来源：[OfficialLoganK（下线 3 Pro、升级 3.1 Pro Preview）](https://x.com/OfficialLoganK/status/2028603510405697604) [TestingCatalog（Gemini Projects in Enterprise）](https://x.com/testingcatalog/status/2028516292420919747)
+
+④ Microsoft Copilot Tasks 或将加入短信（SMS）支持：可通过短信接收任务更新、并从消息中发起新任务，体现「任务/代理」能力向更自然的通知与入口（Messages）扩展。消息来源：[TestingCatalog](https://x.com/testingcatalog/status/2028588900734636124)
 
 
 ## 分组提示
@@ -613,10 +624,9 @@ class AIContentService {
 - 相同公司的多个产品发布可以归为一组，使用子编号（1）2）3）格式）
 - 相同技术领域的不同公司动态可以分别成组
 - 关注推文中的关键词，如公司名、产品名、技术术语等
-- 优先合并具有明显关联性的消息
+- 优先合并具有明显关联性的消息`;
 
-
----
+    const userPrompt = `请基于以下推文数据生成简报。
 
 ## 推文数据
 
@@ -625,6 +635,16 @@ ${formattedTweets}
 ---
 
 **请严格按照上述 Markdown 格式要求生成简报，确保标题层级清晰、列表格式标准、链接格式统一。特别注意：消息来源必须使用推文数据中提供的实际链接地址，格式为 [来源名称](实际链接地址)。**`;
+
+    return {
+      systemPrompt,
+      userPrompt
+    };
+  }
+
+  buildTweetAnalysisPrompt(tweetsData) {
+    const { systemPrompt, userPrompt } = this.buildTweetAnalysisPromptParts(tweetsData);
+    return `${systemPrompt}\n\n${userPrompt}`;
   }
 
   /**
@@ -647,9 +667,12 @@ ${formattedTweets}
   async analyzeTweetsAndGenerateReport(tweetsData, options = {}) {
     try {
       Logger.info(`开始分析 ${tweetsData.length} 条推文数据...`);
-      
-      const analysisPrompt = this.buildTweetAnalysisPrompt(tweetsData);
-      const result = await this.generateContent(analysisPrompt, options);
+
+      const { systemPrompt, userPrompt } = this.buildTweetAnalysisPromptParts(tweetsData);
+      const result = await this.generateContent(userPrompt, {
+        ...options,
+        systemPrompt
+      });
 
       Logger.info('推文分析和简报生成完成');
 
