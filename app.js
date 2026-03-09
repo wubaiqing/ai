@@ -93,7 +93,8 @@ class TaskScheduler {
             command,
             args,
             lastRun: null,
-            nextRun
+            nextRun,
+            isRunning: false
         });
         log('INFO', `Task added: ${name} - Next run: ${TimezoneUtils.formatDateTime(nextRun)}`);
     }
@@ -135,6 +136,7 @@ class TaskScheduler {
     // 执行任务
     async executeTask(task) {
         const startTime = new Date();
+        task.isRunning = true;
         log('INFO', `Starting task: ${task.name}`, 'TASK');
         
         try {
@@ -150,6 +152,8 @@ class TaskScheduler {
             log('ERROR', `Task failed: ${task.name} - ${error.message}`, 'TASK');
             // 任务失败时，仍然更新下次运行时间，避免重复执行
             task.nextRun = this.getNextRunTime(task.cronTime);
+        } finally {
+            task.isRunning = false;
         }
     }
     
@@ -177,7 +181,7 @@ class TaskScheduler {
         const now = new Date();
         
         for (const task of this.tasks.values()) {
-            if (task.nextRun <= now) {
+            if (task.nextRun <= now && !task.isRunning) {
                 // 异步执行任务，不阻塞其他任务
                 this.executeTask(task).catch(error => {
                     log('ERROR', `Task execution error: ${error.message}`, 'SCHEDULER');
