@@ -85,7 +85,7 @@ class AIContentService {
       if (ValidationUtils.isEmptyOrWhitespace(normalizedApiKey)) {
         throw ErrorHandler.createStandardizedError(
           'AI_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
-          '1. 访问 https://zenmux.ai/ 获取API密钥\n' +
+          '1. 访问 https://openrouter.ai/keys 获取API密钥\n' +
           '2. 在 .env 文件中设置 AI_API_KEY=你的真实API密钥\n' +
           '3. 重启应用程序使环境变量生效',
           'MISSING_API_KEY'
@@ -96,7 +96,7 @@ class AIContentService {
       if (normalizedApiKey === 'your_ai_api_key_here' || normalizedApiKey === 'your_deepseek_api_key_here') {
         throw ErrorHandler.createStandardizedError(
           'AI_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
-          '1. 访问 https://zenmux.ai/ 获取真实API密钥\n' +
+          '1. 访问 https://openrouter.ai/keys 获取真实API密钥\n' +
           '2. 替换 .env 文件中的占位符文本\n' +
           '3. 重启应用程序',
           'PLACEHOLDER_API_KEY'
@@ -392,7 +392,7 @@ class AIContentService {
 
           if (!apiKeyStatus || apiKeyStatus === 'your_ai_api_key_here' || apiKeyStatus === 'your_deepseek_api_key_here') {
             errorMessage += '\n\n🔧 解决方案：\n' +
-              '1. 访问 https://zenmux.ai/ 获取API密钥\n' +
+              '1. 访问 https://openrouter.ai/keys 获取API密钥\n' +
               '2. 在 .env 文件中设置 AI_API_KEY=你的真实API密钥\n' +
               '3. 确保API密钥不是占位符文本\n' +
               '4. 重启应用程序使环境变量生效';
@@ -400,7 +400,7 @@ class AIContentService {
             errorMessage += '\n\n🔧 可能的原因：\n' +
               '1. API密钥已过期或无效\n' +
               '2. API密钥权限不足\n' +
-              '3. 请检查 Zenmux.ai 平台账户状态和余额';
+              '3. 请检查 OpenRouter 平台账户状态和余额';
           }
           
           throw ErrorHandler.createStandardizedError(

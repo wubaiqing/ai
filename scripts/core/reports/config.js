@@ -35,11 +35,11 @@ const applicationConfig = {
     tableName: 'tweets'
   },
 
-// AI服务配置 - Zenmux.ai 平台（支持多种模型）
+// AI服务配置 - OpenRouter 平台（支持多种模型）
   aiService: {
-    baseUrl: process.env.AI_API_BASE_URL || 'https://zenmux.ai/api/v1/chat/completions',
+    baseUrl: process.env.AI_API_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions',
     apiKey: process.env.AI_API_KEY || '',
-    modelName: process.env.AI_MODEL_NAME || 'openai/gpt-5.2',
+    modelName: process.env.AI_MODEL_NAME || 'openai/gpt-4o-mini',
     requestTimeout: 300000, // 5分钟超时
     maxTokens: 4096,
     temperature: 0.7
