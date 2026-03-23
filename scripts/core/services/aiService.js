@@ -158,27 +158,30 @@ class AIContentService {
 
   /**
    * 判断URL是否需要使用代理
-   * 只有访问x.com相关的URL才需要使用代理
+   * 在配置了代理参数时，访问受限域名通过代理转发
    * @param {string} url - 要检查的URL
    * @returns {boolean} 是否需要使用代理
    * @private
    */
   shouldUseProxy(url) {
     if (!url) return false;
+    if (!process.env.PROXY_HOST || !process.env.PROXY_PORT) return false;
     
-    // 只有访问x.com（Twitter）相关的URL才使用代理
-    const xComDomains = [
+    // 访问受限站点（X + OpenRouter）时走代理
+    const proxyDomains = [
       'x.com',
       'www.x.com',
       'api.x.com',
       'twitter.com',
       'www.twitter.com',
-      'api.twitter.com'
+      'api.twitter.com',
+      'openrouter.ai',
+      'api.openrouter.ai'
     ];
     
     try {
       const urlObj = new URL(url);
-      return xComDomains.some(domain => 
+      return proxyDomains.some(domain =>
         urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain)
       );
     } catch (error) {
@@ -207,8 +210,7 @@ class AIContentService {
       }
     };
 
-    // 只有访问x.com相关URL时才添加代理配置
-    if (this.shouldUseProxy(targetUrl) && process.env.PROXY_HOST && process.env.PROXY_PORT) {
+    if (this.shouldUseProxy(targetUrl)) {
       let proxyUrl;
       if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
         // 使用带认证的代理
@@ -222,7 +224,7 @@ class AIContentService {
       axiosConfig.httpsAgent = isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl);
       axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
       
-      Logger.info('为x.com请求配置代理', { 
+      Logger.info('为受限域名请求配置代理', {
         targetUrl,
         proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
         isHttps: isHttps,
