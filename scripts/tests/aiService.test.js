@@ -59,14 +59,14 @@ describe('AIContentService OpenRouter configuration', () => {
     expect(payload.temperature).toBe(0.7);
   });
 
-  test('shouldUseProxy should return true for OpenRouter when proxy env is set', () => {
+  test('shouldUseProxy should return true when proxy env is set', () => {
     process.env.PROXY_HOST = '127.0.0.1';
     process.env.PROXY_PORT = '7890';
     const service = new AIContentService();
 
     expect(service.shouldUseProxy('https://openrouter.ai/api/v1/chat/completions')).toBe(true);
     expect(service.shouldUseProxy('https://api.openrouter.ai/v1/models')).toBe(true);
-    expect(service.shouldUseProxy('https://example.com')).toBe(false);
+    expect(service.shouldUseProxy('https://example.com')).toBe(true);
   });
 
   test('makeAPIRequest should send payload to configured client', async () => {

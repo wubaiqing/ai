@@ -158,37 +158,13 @@ class AIContentService {
 
   /**
    * 判断URL是否需要使用代理
-   * 在配置了代理参数时，访问受限域名通过代理转发
+   * 只要配置了代理参数，AI请求统一走代理
    * @param {string} url - 要检查的URL
    * @returns {boolean} 是否需要使用代理
    * @private
    */
-  shouldUseProxy(url) {
-    if (!url) return false;
-    if (!process.env.PROXY_HOST || !process.env.PROXY_PORT) return false;
-    
-    // 访问受限站点（X + OpenRouter）时走代理
-    const proxyDomains = [
-      'x.com',
-      'www.x.com',
-      'api.x.com',
-      'twitter.com',
-      'www.twitter.com',
-      'api.twitter.com',
-      'openrouter.ai',
-      'api.openrouter.ai'
-    ];
-    
-    try {
-      const urlObj = new URL(url);
-      return proxyDomains.some(domain =>
-        urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain)
-      );
-    } catch (error) {
-      // 如果URL解析失败，默认不使用代理
-      Logger.warn('URL解析失败，不使用代理', { url, error: error.message });
-      return false;
-    }
+  shouldUseProxy() {
+    return Boolean(process.env.PROXY_HOST && process.env.PROXY_PORT);
   }
 
   /**
@@ -210,7 +186,7 @@ class AIContentService {
       }
     };
 
-    if (this.shouldUseProxy(targetUrl)) {
+    if (this.shouldUseProxy()) {
       let proxyUrl;
       if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
         // 使用带认证的代理
