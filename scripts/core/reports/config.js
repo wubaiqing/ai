@@ -35,11 +35,13 @@ const applicationConfig = {
     tableName: 'tweets'
   },
 
-// AI服务配置 - OpenRouter 平台（支持多种模型）
+  // AI 服务配置 - CozeLoop
   aiService: {
-    baseUrl: process.env.AI_API_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions',
-    apiKey: process.env.AI_API_KEY || '',
-    modelName: process.env.AI_MODEL_NAME || 'openai/gpt-4o-mini',
+    cozeBaseUrl: process.env.COZELOOP_API_BASE_URL || 'https://api.coze.cn',
+    cozeToken: process.env.COZELOOP_TOKEN || '',
+    cozeWorkspaceId: process.env.COZELOOP_WORKSPACE_ID || '',
+    cozePromptKey: process.env.COZELOOP_PROMPT_KEY || '',
+    cozePromptVersion: process.env.COZELOOP_PROMPT_VERSION || '',
     requestTimeout: 300000, // 5分钟超时
     maxTokens: 4096,
     temperature: 0.7
@@ -90,7 +92,9 @@ function validateEnvironmentVariables() {
   const requiredEnvVars = {
     SUPABASE_URL: applicationConfig.database.supabaseUrl,
     SUPABASE_SERVICE_ROLE_KEY: applicationConfig.database.serviceRoleKey,
-    AI_API_KEY: applicationConfig.aiService.apiKey
+    COZELOOP_TOKEN: applicationConfig.aiService.cozeToken,
+    COZELOOP_WORKSPACE_ID: applicationConfig.aiService.cozeWorkspaceId,
+    COZELOOP_PROMPT_KEY: applicationConfig.aiService.cozePromptKey
   };
 
   const missingVars = [];

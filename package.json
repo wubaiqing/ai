@@ -24,6 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@cozeloop/ai": "^0.0.11",
     "@supabase/supabase-js": "^2.56.0",
     "axios": "^1.12.0",
     "cors": "^2.8.5",

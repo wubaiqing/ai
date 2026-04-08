@@ -1,18 +1,33 @@
-jest.mock('axios', () => ({
-  create: jest.fn()
-}));
+jest.mock('@cozeloop/ai', () => {
+  const invoke = jest.fn();
+  const ApiClient = jest.fn().mockImplementation(options => ({ options }));
+  const PromptAsAService = jest.fn().mockImplementation(options => ({
+    options,
+    invoke
+  }));
 
-const axios = require('axios');
+  return {
+    ApiClient,
+    PromptAsAService,
+    __mockInvoke: invoke
+  };
+});
+
+const cozeloop = require('@cozeloop/ai');
 const { AIContentService } = require('../core/services/aiService');
 const { applicationConfig } = require('../core/reports/config');
 
-describe('AIContentService OpenRouter configuration', () => {
+describe('AIContentService CozeLoop integration', () => {
   const originalAIConfig = { ...applicationConfig.aiService };
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...originalEnv };
+    delete process.env.PROXY_HOST;
+    delete process.env.PROXY_PORT;
+    delete process.env.PROXY_USERNAME;
+    delete process.env.PROXY_PASSWORD;
     applicationConfig.aiService = { ...originalAIConfig };
   });
 
@@ -21,42 +36,51 @@ describe('AIContentService OpenRouter configuration', () => {
     applicationConfig.aiService = originalAIConfig;
   });
 
-  test('initializeService should configure auth headers', () => {
-    const mockClient = { post: jest.fn() };
-    axios.create.mockReturnValue(mockClient);
-
-    applicationConfig.aiService.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    applicationConfig.aiService.apiKey = 'sk-or-v1-test-key';
-    applicationConfig.aiService.requestTimeout = 12345;
+  test('initializeService should configure CozeLoop prompt service', () => {
+    applicationConfig.aiService.cozeBaseUrl = 'https://api.coze.cn';
+    applicationConfig.aiService.cozeToken = 'pat_test_token';
+    applicationConfig.aiService.cozeWorkspaceId = 'workspace_123';
+    applicationConfig.aiService.cozePromptKey = 'daily_report';
+    applicationConfig.aiService.cozePromptVersion = '0.0.1';
+    applicationConfig.aiService.requestTimeout = 23456;
 
     const service = new AIContentService();
     service.initializeService();
 
-    expect(axios.create).toHaveBeenCalledTimes(1);
-    expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({
-      baseURL: 'https://openrouter.ai/api/v1/chat/completions',
-      timeout: 12345,
-      headers: expect.objectContaining({
-        Authorization: 'Bearer sk-or-v1-test-key',
-        'Content-Type': 'application/json'
+    expect(cozeloop.ApiClient).toHaveBeenCalledWith(expect.objectContaining({
+      token: 'pat_test_token',
+      baseURL: 'https://api.coze.cn',
+      axiosOptions: expect.objectContaining({
+        timeout: 23456
       })
+    }));
+    expect(cozeloop.PromptAsAService).toHaveBeenCalledWith(expect.objectContaining({
+      workspaceId: 'workspace_123',
+      prompt: {
+        prompt_key: 'daily_report',
+        version: '0.0.1'
+      }
     }));
   });
 
-  test('buildRequestPayload should use configured model by default', () => {
-    applicationConfig.aiService.modelName = 'openai/gpt-4o-mini';
-    applicationConfig.aiService.maxTokens = 4096;
-    applicationConfig.aiService.temperature = 0.7;
-
+  test('buildRequestPayload should build CozeLoop messages and variables', () => {
     const service = new AIContentService();
-    const payload = service.buildRequestPayload('hello world', {});
+    const payload = service.buildRequestPayload('user prompt', {
+      systemPrompt: 'system prompt',
+      variables: {
+        topic: 'artificial intelligence'
+      }
+    });
 
-    expect(payload.model).toBe('openai/gpt-4o-mini');
-    expect(payload.messages).toEqual([
-      { role: 'user', content: 'hello world' }
-    ]);
-    expect(payload.max_tokens).toBe(4096);
-    expect(payload.temperature).toBe(0.7);
+    expect(payload).toEqual({
+      messages: [
+        { role: 'system', content: 'system prompt' },
+        { role: 'user', content: 'user prompt' }
+      ],
+      variables: {
+        topic: 'artificial intelligence'
+      }
+    });
   });
 
   test('shouldUseProxy should return true when proxy env is set', () => {
@@ -64,30 +88,47 @@ describe('AIContentService OpenRouter configuration', () => {
     process.env.PROXY_PORT = '7890';
     const service = new AIContentService();
 
-    expect(service.shouldUseProxy('https://openrouter.ai/api/v1/chat/completions')).toBe(true);
-    expect(service.shouldUseProxy('https://api.openrouter.ai/v1/models')).toBe(true);
-    expect(service.shouldUseProxy('https://example.com')).toBe(true);
+    expect(service.shouldUseProxy()).toBe(true);
   });
 
-  test('makeAPIRequest should send payload to configured client', async () => {
+  test('makeAPIRequest should invoke CozeLoop prompt service', async () => {
     const payload = {
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: 'ping' }]
+      messages: [{ role: 'user', content: 'ping' }],
+      variables: { topic: 'AI' }
     };
-    const apiResponse = { choices: [{ message: { content: 'pong' } }] };
-    const mockPost = jest.fn().mockResolvedValue({ data: apiResponse });
-    const mockClient = { post: mockPost };
-    axios.create.mockReturnValue(mockClient);
+    cozeloop.__mockInvoke.mockResolvedValue({
+      message: {
+        role: 'assistant',
+        content: 'pong'
+      }
+    });
 
-    applicationConfig.aiService.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    applicationConfig.aiService.apiKey = 'sk-or-v1-test-key';
+    applicationConfig.aiService.cozeToken = 'pat_test_token';
+    applicationConfig.aiService.cozeWorkspaceId = 'workspace_123';
+    applicationConfig.aiService.cozePromptKey = 'daily_report';
 
     const service = new AIContentService();
     service.initializeService();
 
     const result = await service.makeAPIRequest(payload);
 
-    expect(mockPost).toHaveBeenCalledWith('', payload);
-    expect(result).toEqual(apiResponse);
+    expect(cozeloop.__mockInvoke).toHaveBeenCalledWith(payload);
+    expect(result).toEqual({
+      message: {
+        role: 'assistant',
+        content: 'pong'
+      }
+    });
+  });
+
+  test('extractContentFromResponse should read content from message', () => {
+    const service = new AIContentService();
+
+    expect(service.extractContentFromResponse({
+      message: {
+        role: 'assistant',
+        content: '  hello world  '
+      }
+    })).toBe('hello world');
   });
 });

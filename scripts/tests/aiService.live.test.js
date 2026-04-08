@@ -1,7 +1,7 @@
 const { AIContentService } = require('../core/services/aiService');
 
 describe('AIContentService live API test', () => {
-  test('should print live AI response from OpenRouter', async () => {
+  test('should print live AI response from configured provider', async () => {
     if (process.env.RUN_LIVE_AI_TEST !== 'true') {
       console.log('跳过实时AI测试：设置 RUN_LIVE_AI_TEST=true 可启用');
       return;

@@ -2,7 +2,7 @@
  * AI服务模块
  * 
  * 提供完整的AI服务集成功能，包括：
- * - OpenAI API客户端管理
+ * - CozeLoop API客户端管理
  * - 智能提示词生成和优化
  * - 推文内容分析和总结
  * - 错误处理和重试机制
@@ -12,13 +12,12 @@
  * @author AI Assistant
  * @version 1.0.0
  * @since 2024-01-01
- * @requires openai
  * @requires ../utils.js
  */
 
-const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { HttpProxyAgent } = require('http-proxy-agent');
+const { ApiClient, PromptAsAService } = require('@cozeloop/ai');
 const { applicationConfig } = require('../reports/config');
 const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
 
@@ -26,7 +25,7 @@ const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib
  * AI服务管理类
  * 
  * 提供完整的AI服务接口，支持：
- * - OpenAI客户端初始化和配置
+ * - CozeLoop 客户端初始化和配置
  * - 智能提示词构建和优化
  * - 推文数据分析和总结生成
  * - API调用错误处理和重试
@@ -45,105 +44,122 @@ class AIContentService {
    * @constructor
    * @param {Object} configuration - AI服务配置对象
    * @param {Object} configuration.ai - AI服务配置
-   * @param {string} configuration.ai.apiKey - OpenAI API密钥
-   * @param {string} configuration.ai.baseUrl - API基础URL
-   * @param {string} configuration.ai.modelName - 使用的AI模型名称
-   * @param {number} configuration.ai.maxTokens - 最大令牌数限制
-   * @param {number} configuration.ai.temperature - 生成温度参数(0-1)
+   * @param {string} configuration.ai.cozeToken - CozeLoop Token
+   * @param {string} configuration.ai.cozeBaseUrl - CozeLoop API基础URL
+   * @param {string} configuration.ai.cozePromptKey - Prompt Key
    * @throws {Error} 当配置无效时抛出错误
    * @example
    * const service = new AIServiceManager({
    *   ai: {
-   *     apiKey: 'sk-xxx',
-   *     modelName: 'gpt-4',
-   *     maxTokens: 2000,
-   *     temperature: 0.7
+   *     cozeToken: 'pat_xxx',
+   *     cozeWorkspaceId: 'workspace_xxx',
+   *     cozePromptKey: 'daily_report'
    *   }
    * });
    */
   constructor() {
     this.isConfigured = false;
-    this.httpClient = null;
+    this.cozeClient = null;
+    this.cozeModel = null;
+  }
+
+  isPlaceholder(value) {
+    return (
+      ValidationUtils.isEmptyOrWhitespace(value) ||
+      value.includes('xxx') ||
+      value.includes('your_') ||
+      value === 'ptaas_demo'
+    );
   }
 
   /**
-   * 初始化OpenAI API客户端
+   * 初始化 CozeLoop API 客户端
    * 
-   * 创建并配置OpenAI客户端实例，设置API密钥和请求参数
+   * 创建并配置 CozeLoop 客户端实例，设置工作空间和 Prompt 信息
    * 
    * @private
-   * @method initializeOpenAIClient
+   * @method initializeService
    * @throws {Error} 当API配置无效时抛出错误
    * @returns {void}
    */
   initializeService() {
     try {
-      const { apiKey, baseUrl, requestTimeout } = applicationConfig.aiService;
-      const normalizedApiKey = (apiKey || '').trim();
-      
-      // 详细的API密钥验证
-      if (ValidationUtils.isEmptyOrWhitespace(normalizedApiKey)) {
-        throw ErrorHandler.createStandardizedError(
-          'AI_API_KEY环境变量未配置\n\n🔧 解决方案：\n' +
-          '1. 访问 https://openrouter.ai/keys 获取API密钥\n' +
-          '2. 在 .env 文件中设置 AI_API_KEY=你的真实API密钥\n' +
-          '3. 重启应用程序使环境变量生效',
-          'MISSING_API_KEY'
-        );
-      }
-
-      // 检查是否为占位符
-      if (normalizedApiKey === 'your_ai_api_key_here' || normalizedApiKey === 'your_deepseek_api_key_here') {
-        throw ErrorHandler.createStandardizedError(
-          'AI_API_KEY仍为占位符，请设置真实的API密钥\n\n🔧 解决方案：\n' +
-          '1. 访问 https://openrouter.ai/keys 获取真实API密钥\n' +
-          '2. 替换 .env 文件中的占位符文本\n' +
-          '3. 重启应用程序',
-          'PLACEHOLDER_API_KEY'
-        );
-      }
-
-      // API密钥格式基础校验（一般以 sk- 开头）
-      if (!/^sk-/.test(normalizedApiKey)) {
-        throw ErrorHandler.createStandardizedError(
-          'AI_API_KEY格式看起来不正确（通常以 sk- 开头）。\n\n🔧 排查建议：\n' +
-          '1. 确认复制的密钥完整且无空格/换行\n' +
-          '2. 在终端运行 echo -n $AI_API_KEY | wc -c 查看长度\n' +
-          '3. 重启应用后重试',
-          'INVALID_API_KEY_FORMAT'
-        );
-      }
-      
-      if (ValidationUtils.isEmptyOrWhitespace(baseUrl)) {
-        throw ErrorHandler.createStandardizedError(
-          'AI服务基础URL未配置',
-          'MISSING_BASE_URL'
-        );
-      }
-
-      // 基础HTTP客户端配置（不包含代理）
-      const axiosConfig = {
-        baseURL: baseUrl,
-        timeout: requestTimeout,
-        headers: {
-          'Authorization': `Bearer ${normalizedApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      };
-
-      // 配置HTTP客户端
-      this.httpClient = axios.create(axiosConfig);
-      
-      this.isConfigured = true;
-      Logger.info('AI服务初始化成功', { 
-        baseUrl: baseUrl,
-        hasApiKey: !!normalizedApiKey,
-        apiKeyLength: normalizedApiKey.length 
-      });
+      this.initializeCozeService();
     } catch (error) {
       Logger.error('AI服务初始化失败', { error: error.message });
       throw error;
     }
+  }
+
+  initializeCozeService() {
+    const {
+      cozeToken,
+      cozeBaseUrl,
+      cozeWorkspaceId,
+      cozePromptKey,
+      cozePromptVersion,
+      requestTimeout
+    } = applicationConfig.aiService;
+
+    const normalizedToken = (cozeToken || '').trim();
+    const normalizedWorkspaceId = (cozeWorkspaceId || '').trim();
+    const normalizedPromptKey = (cozePromptKey || '').trim();
+    const normalizedPromptVersion = (cozePromptVersion || '').trim();
+
+    if (this.isPlaceholder(normalizedToken)) {
+      throw ErrorHandler.createStandardizedError(
+        'COZELOOP_TOKEN 未配置或仍为占位符，请设置真实的 CozeLoop Token',
+        'MISSING_COZE_TOKEN'
+      );
+    }
+
+    if (this.isPlaceholder(normalizedWorkspaceId)) {
+      throw ErrorHandler.createStandardizedError(
+        'COZELOOP_WORKSPACE_ID 未配置或仍为占位符，请设置真实的 CozeLoop 工作空间 ID',
+        'MISSING_COZE_WORKSPACE_ID'
+      );
+    }
+
+    if (this.isPlaceholder(normalizedPromptKey)) {
+      throw ErrorHandler.createStandardizedError(
+        'COZELOOP_PROMPT_KEY 未配置或仍为占位符，请设置真实的 Prompt Key',
+        'MISSING_COZE_PROMPT_KEY'
+      );
+    }
+
+    const apiClientOptions = {
+      token: normalizedToken,
+      baseURL: cozeBaseUrl,
+      axiosOptions: {
+        timeout: requestTimeout
+      }
+    };
+
+    if (this.shouldUseProxy()) {
+      const proxyAxiosOptions = this.buildProxyAxiosOptions(cozeBaseUrl);
+      apiClientOptions.axiosOptions = {
+        ...apiClientOptions.axiosOptions,
+        ...proxyAxiosOptions
+      };
+    }
+
+    this.cozeClient = new ApiClient(apiClientOptions);
+    this.cozeModel = new PromptAsAService({
+      workspaceId: normalizedWorkspaceId,
+      prompt: {
+        prompt_key: normalizedPromptKey,
+        ...(normalizedPromptVersion ? { version: normalizedPromptVersion } : {})
+      },
+      apiClient: this.cozeClient
+    });
+
+    this.isConfigured = true;
+    Logger.info('CozeLoop AI服务初始化成功', {
+      provider: 'cozeloop',
+      workspaceId: normalizedWorkspaceId,
+      promptKey: normalizedPromptKey,
+      hasPromptVersion: !!normalizedPromptVersion
+    });
   }
 
   /**
@@ -151,7 +167,7 @@ class AIContentService {
    * @private
    */
   ensureServiceInitialized() {
-    if (!this.isConfigured || !this.httpClient) {
+    if (!this.isConfigured || !this.cozeModel) {
       this.initializeService();
     }
   }
@@ -167,64 +183,37 @@ class AIContentService {
     return Boolean(process.env.PROXY_HOST && process.env.PROXY_PORT);
   }
 
-  /**
-   * 创建带代理配置的HTTP客户端
-   * @param {string} targetUrl - 目标URL
-   * @returns {Object} 配置好的axios实例
-   * @private
-   */
-  createHttpClientWithProxy(targetUrl) {
-    const { baseUrl, requestTimeout, apiKey } = applicationConfig.aiService;
-    const normalizedApiKey = (apiKey || '').trim();
-    
-    const axiosConfig = {
-      baseURL: baseUrl,
-      timeout: requestTimeout,
-      headers: {
-        'Authorization': `Bearer ${normalizedApiKey}`,
-        'Content-Type': 'application/json'
-      }
-    };
-
-    if (this.shouldUseProxy()) {
-      let proxyUrl;
-      if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
-        // 使用带认证的代理
-        proxyUrl = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-      } else {
-        // 使用无认证代理
-        proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-      }
-      
-      const isHttps = targetUrl.startsWith('https');
-      axiosConfig.httpsAgent = isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl);
-      axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
-      
-      Logger.info('为受限域名请求配置代理', {
-        targetUrl,
-        proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
-        isHttps: isHttps,
-        hasAuth: !!(process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD)
-      });
-      
-      // 添加代理连接测试
-      axiosConfig.validateStatus = function (status) {
-        // 接受200-299范围的状态码，以及502（代理错误）用于诊断
-        return (status >= 200 && status < 300) || status === 502;
-      };
+  buildProxyAxiosOptions(targetUrl) {
+    let proxyUrl;
+    if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
+      proxyUrl = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
+    } else {
+      proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
     }
 
-    return axios.create(axiosConfig);
+    const isHttps = targetUrl.startsWith('https');
+
+    Logger.info('为AI请求配置代理', {
+      targetUrl,
+      proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
+      isHttps,
+      hasAuth: !!(process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD)
+    });
+
+    return {
+      httpAgent: new HttpProxyAgent(proxyUrl),
+      httpsAgent: isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl)
+    };
   }
 
   /**
-   * 调用OpenAI API生成内容
+   * 调用 CozeLoop API 生成内容
    * 
-   * 发送请求到OpenAI API，处理响应和错误，确保稳定的服务调用
+   * 发送请求到 CozeLoop API，处理响应和错误，确保稳定的服务调用
    * 
    * @private
    * @async
-   * @method callOpenAIAPI
+   * @method generateContent
    * @param {string} promptText - 完整的提示词内容
    * @returns {Promise<string>} AI生成的响应内容
    * @throws {Error} 当API调用失败或响应无效时抛出错误
@@ -237,16 +226,18 @@ class AIContentService {
       this.ensureServiceInitialized();
       
       if (ValidationUtils.isEmptyOrWhitespace(promptText)) {
-      throw ErrorHandler.createStandardizedError('提示词不能为空', 'EMPTY_PROMPT');
+        throw ErrorHandler.createStandardizedError('提示词不能为空', 'EMPTY_PROMPT');
       }
       
-      Logger.info('开始调用AI API生成内容...', { model: applicationConfig.aiService.modelName });
+      Logger.info('开始调用 CozeLoop 生成内容...', {
+        promptKey: applicationConfig.aiService.cozePromptKey
+      });
       
       const requestPayload = this.buildRequestPayload(promptText, options);
       const apiResponse = await this.makeAPIRequest(requestPayload);
       const generatedContent = this.extractContentFromResponse(apiResponse);
 
-      Logger.info('AI API调用成功，内容生成完成');
+      Logger.info('CozeLoop 调用成功，内容生成完成');
 
       return {
         content: generatedContent
@@ -265,12 +256,6 @@ class AIContentService {
    * @private
    */
   buildRequestPayload(promptText, options) {
-    const {
-      modelName,
-      maxTokens,
-      temperature
-    } = applicationConfig.aiService;
-
     const messages = [];
 
     if (!ValidationUtils.isEmptyOrWhitespace(options.systemPrompt)) {
@@ -284,62 +269,40 @@ class AIContentService {
       role: 'user',
       content: promptText
     });
-    
+
     return {
-      model: options.model || modelName,
       messages,
-      temperature: options.temperature || temperature,
-      max_tokens: options.maxTokens || maxTokens,
-      ...options.additionalParams
+      variables: options.variables || {}
     };
   }
 
   /**
    * 发送API请求到AI服务（带重试机制）
    * 
-   * 处理与AI服务的HTTP通信，包括请求构建、发送和响应处理
-   * 根据目标URL动态决定是否使用代理（只有x.com相关URL使用代理）
+   * 处理与 CozeLoop 的通信，包括请求构建、发送和响应处理
    * 
    * @private
    * @async
    * @method makeAPIRequest
    * @param {Object} requestData - 请求数据对象
-   * @param {string} requestData.model - 使用的AI模型名称
    * @param {Array} requestData.messages - 消息数组
-   * @param {number} [requestData.max_tokens] - 最大token数量
-   * @param {number} [requestData.temperature] - 温度参数
    * @param {number} [retryCount=0] - 当前重试次数
    * @returns {Promise<Object>} API响应数据
    * @throws {Error} 当API请求失败时抛出错误
    * @example
    * // 内部使用，发送结构化的API请求
    * const response = await this.makeAPIRequest({
-   *   model: 'gpt-3.5-turbo',
    *   messages: [{ role: 'user', content: 'Hello' }]
    * });
    */
   async makeAPIRequest(requestPayload, retryCount = 0) {
     try {
-      // 获取目标URL用于判断是否需要代理
-      const { baseUrl } = applicationConfig.aiService;
-      const targetUrl = baseUrl;
-      
-      // 根据目标URL动态选择HTTP客户端（是否使用代理）
-      let httpClient;
-      if (this.shouldUseProxy(targetUrl)) {
-        // 为x.com相关请求创建带代理的客户端
-        httpClient = this.createHttpClientWithProxy(targetUrl);
-        Logger.info('使用代理发送请求', { targetUrl });
-      } else {
-        // 使用默认的无代理客户端
-        httpClient = this.httpClient;
-        Logger.info('直接发送请求（不使用代理）', { targetUrl });
+      if (!this.cozeModel) {
+        throw new Error('CozeLoop 模型未初始化');
       }
-      
-      const response = await httpClient.post('', requestPayload);
-      return response.data;
+
+      return await this.cozeModel.invoke(requestPayload);
     } catch (error) {
-      // 详细的错误诊断信息
       const errorDetails = {
         message: error.message,
         code: error.code,
@@ -357,45 +320,26 @@ class AIContentService {
         isProxyError: error.code === 'ECONNREFUSED' && process.env.PROXY_HOST
       };
 
-      Logger.error('AI API请求失败', errorDetails);
+      Logger.error('CozeLoop API请求失败', errorDetails);
 
       if (error.response) {
-        // API返回了错误响应
         const { status, data } = error.response;
-        
-        // 特殊处理401认证错误
-        if (status === 401) {
-          const apiKeyStatus = applicationConfig.aiService.apiKey;
-          let errorMessage = 'API认证失败 (状态码: 401)';
 
-          if (!apiKeyStatus || apiKeyStatus === 'your_ai_api_key_here' || apiKeyStatus === 'your_deepseek_api_key_here') {
-            errorMessage += '\n\n🔧 解决方案：\n' +
-              '1. 访问 https://openrouter.ai/keys 获取API密钥\n' +
-              '2. 在 .env 文件中设置 AI_API_KEY=你的真实API密钥\n' +
-              '3. 确保API密钥不是占位符文本\n' +
-              '4. 重启应用程序使环境变量生效';
-          } else {
-            errorMessage += '\n\n🔧 可能的原因：\n' +
-              '1. API密钥已过期或无效\n' +
-              '2. API密钥权限不足\n' +
-              '3. 请检查 OpenRouter 平台账户状态和余额';
-          }
-          
+        if (status === 401) {
           throw ErrorHandler.createStandardizedError(
-            errorMessage,
+            'CozeLoop 认证失败 (状态码: 401)，请检查 COZELOOP_TOKEN 是否有效，以及工作空间权限是否正确',
             'API_AUTHENTICATION_ERROR',
             error
           );
         }
         
         throw ErrorHandler.createStandardizedError(
-          `API请求失败 (状态码: ${status}): ${data.error?.message || '未知错误'}`,
+          `CozeLoop 请求失败 (状态码: ${status}): ${data?.message || data?.error?.message || '未知错误'}`,
           'API_REQUEST_ERROR',
           error
         );
       } else if (error.request) {
-        // 处理网络连接错误
-        let errorMessage = '网络连接失败';
+        let errorMessage = 'CozeLoop 网络连接失败';
         if (errorDetails.isProxyError) {
           errorMessage += `，代理服务器连接失败 (${process.env.PROXY_HOST}:${process.env.PROXY_PORT})`;
         } else if (errorDetails.isTimeoutError) {
@@ -404,9 +348,8 @@ class AIContentService {
           errorMessage += '，请检查网络连接和防火墙设置';
         }
         
-        // 对于网络错误，尝试重试
         const maxRetries = 3;
-        const retryDelay = Math.pow(2, retryCount) * 1000; // 指数退避：1s, 2s, 4s
+        const retryDelay = Math.pow(2, retryCount) * 1000;
         
         if (retryCount < maxRetries && (errorDetails.isNetworkError || errorDetails.isTimeoutError)) {
           Logger.warn(`网络请求失败，${retryDelay}ms后进行第${retryCount + 1}次重试`, {
@@ -425,7 +368,6 @@ class AIContentService {
           error
         );
       } else {
-        // 其他错误
         throw ErrorHandler.createStandardizedError(
           `请求配置错误: ${error.message}`,
           'REQUEST_CONFIG_ERROR',
@@ -449,20 +391,25 @@ class AIContentService {
    * const isValid = this.validateAIResponseQuality(aiResponse);
    */
   extractContentFromResponse(apiResponse) {
-    if (!apiResponse || !apiResponse.choices || !Array.isArray(apiResponse.choices)) {
-      throw ErrorHandler.createStandardizedError('API响应格式异常：缺少choices字段', 'INVALID_RESPONSE_FORMAT');
+    const content = apiResponse?.message?.content;
+    const parts = apiResponse?.message?.parts;
+
+    if (typeof content === 'string' && content.trim()) {
+      return content.trim();
     }
-    
-    if (apiResponse.choices.length === 0) {
-      throw ErrorHandler.createStandardizedError('API响应格式异常：choices数组为空', 'EMPTY_CHOICES');
+
+    if (Array.isArray(parts)) {
+      const mergedText = parts
+        .map(part => part?.text || '')
+        .join('')
+        .trim();
+
+      if (mergedText) {
+        return mergedText;
+      }
     }
-    
-    const firstChoice = apiResponse.choices[0];
-    if (!firstChoice.message || !firstChoice.message.content) {
-      throw ErrorHandler.createStandardizedError('API响应格式异常：缺少message.content字段', 'MISSING_CONTENT');
-    }
-    
-    return firstChoice.message.content.trim();
+
+    throw ErrorHandler.createStandardizedError('CozeLoop 响应格式异常：缺少 message.content', 'INVALID_COZE_RESPONSE');
   }
 
 
@@ -656,7 +603,7 @@ ${formattedTweets}
 
       return {
         content: result.content,
-        model: applicationConfig.aiService.modelName
+        model: applicationConfig.aiService.cozePromptKey
       };
     } catch (error) {
       Logger.error('推文分析失败', { error: error.message });
@@ -669,12 +616,12 @@ ${formattedTweets}
    * @returns {Object} 验证结果
    */
   validateConfiguration() {
-    const { apiKey, baseUrl, modelName } = applicationConfig.aiService;
-    
+    const { cozeToken, cozeWorkspaceId, cozePromptKey } = applicationConfig.aiService;
+
     const validationResults = {
-      hasApiKey: !ValidationUtils.isEmptyOrWhitespace(apiKey),
-      hasBaseUrl: !ValidationUtils.isEmptyOrWhitespace(baseUrl),
-      hasModelName: !ValidationUtils.isEmptyOrWhitespace(modelName)
+      hasCozeToken: !ValidationUtils.isEmptyOrWhitespace(cozeToken),
+      hasWorkspaceId: !ValidationUtils.isEmptyOrWhitespace(cozeWorkspaceId),
+      hasPromptKey: !ValidationUtils.isEmptyOrWhitespace(cozePromptKey)
     };
     
     const isValid = Object.values(validationResults).every(result => result === true);
