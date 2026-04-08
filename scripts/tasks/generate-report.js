@@ -88,7 +88,7 @@ function displayApplicationHelp() {
   
 配置:
   请确保已正确配置以下环境变量:
-  - `COZELOOP_TOKEN`、`COZELOOP_WORKSPACE_ID`、`COZELOOP_PROMPT_KEY`
+  - COZELOOP_TOKEN、COZELOOP_WORKSPACE_ID、COZELOOP_PROMPT_KEY
   
 输出:
   生成的简报将保存到 outputs/ 目录下
