@@ -15,8 +15,6 @@
  * @requires ../utils.js
  */
 
-const { HttpsProxyAgent } = require('https-proxy-agent');
-const { HttpProxyAgent } = require('http-proxy-agent');
 const { ApiClient, PromptAsAService } = require('@cozeloop/ai');
 const { applicationConfig } = require('../reports/config');
 const { Logger, ValidationUtils, ErrorHandler, DataFormatter } = require('../lib/utils');
@@ -135,14 +133,6 @@ class AIContentService {
       }
     };
 
-    if (this.shouldUseProxy()) {
-      const proxyAxiosOptions = this.buildProxyAxiosOptions(cozeBaseUrl);
-      apiClientOptions.axiosOptions = {
-        ...apiClientOptions.axiosOptions,
-        ...proxyAxiosOptions
-      };
-    }
-
     this.cozeClient = new ApiClient(apiClientOptions);
     this.cozeModel = new PromptAsAService({
       workspaceId: normalizedWorkspaceId,
@@ -170,40 +160,6 @@ class AIContentService {
     if (!this.isConfigured || !this.cozeModel) {
       this.initializeService();
     }
-  }
-
-  /**
-   * 判断URL是否需要使用代理
-   * 只要配置了代理参数，AI请求统一走代理
-   * @param {string} url - 要检查的URL
-   * @returns {boolean} 是否需要使用代理
-   * @private
-   */
-  shouldUseProxy() {
-    return Boolean(process.env.PROXY_HOST && process.env.PROXY_PORT);
-  }
-
-  buildProxyAxiosOptions(targetUrl) {
-    let proxyUrl;
-    if (process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD) {
-      proxyUrl = `http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-    } else {
-      proxyUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`;
-    }
-
-    const isHttps = targetUrl.startsWith('https');
-
-    Logger.info('为AI请求配置代理', {
-      targetUrl,
-      proxyUrl: `${process.env.PROXY_HOST}:${process.env.PROXY_PORT}`,
-      isHttps,
-      hasAuth: !!(process.env.PROXY_USERNAME && process.env.PROXY_PASSWORD)
-    });
-
-    return {
-      httpAgent: new HttpProxyAgent(proxyUrl),
-      httpsAgent: isHttps ? new HttpsProxyAgent(proxyUrl) : new HttpProxyAgent(proxyUrl)
-    };
   }
 
   /**
@@ -535,13 +491,23 @@ class AIContentService {
 
 ## 格式示例
 
-① Claude（Anthropic）向免费用户开放「Memory/记忆」能力，并强化记忆导入/导出与数据迁移体验：用户可在 Settings → Memory 开启；免费版现在也能使用记忆功能，并可更方便地导入已保存记忆，且支持随时导出。消息来源：[ClaudeAI（开启入口提示）](https://x.com/claudeai/status/2028559429751513345) [ClaudeAI（免费版开放与导入导出）](https://x.com/claudeai/status/2028559427167834314) [aigclink（数据迁移开放给免费用户）](https://x.com/aigclink/status/2028612894401913306)
+① **Anthropic / Claude Code 近期密集更新，同时因源码泄露引发对其架构、能力边界与治理流程的集中关注。**  
+1）官方已将 **Auto mode** 扩展到 Enterprise 计划与 API 用户，可通过 `claude --enable-auto-mode` 启用，说明 Claude Code 正在从“辅助编程”继续向更高自动化的代理式编码体验推进。  
+2）官方还上线了 **Computer use in Claude Code** 研究预览，支持直接从 CLI 打开应用、操作 UI、测试自己生成的结果，这是“代码代理”向“电脑操作代理”扩展的重要一步。  
+3）终端侧新增实验性 **NO_FLICKER 渲染模式**，通过虚拟化 viewport 改善长对话下终端闪屏、跳屏问题，并支持鼠标交互、输入框固定到底部等体验优化。  
+4）围绕 Claude Code 源码泄露，社区出现了对其记忆系统、Agent Loop、功能开关、提示词工程与遥测机制的大量拆解；Anthropic 工程负责人也公开说明问题源于手工部署流程，后续已改进自动化与流程控制。这起事件本身也凸显了 AI 编程产品在透明度、遥测、功能灰度和闭源治理上的行业争议。  
+消息来源：[ClaudeAI（Auto mode 面向 Enterprise/API）](https://x.com/claudeai/status/2038693742094246032) [ClaudeAI（Claude Code 接入 Computer Use）](https://x.com/claudeai/status/2038663014098899416) [bcherny（NO_FLICKER 模式发布）](https://x.com/bcherny/status/2039421575422980329) [bcherny（虚拟 viewport 渲染原理）](https://x.com/bcherny/status/2039421581907374320) [trq212（重写 renderer、支持鼠标与底部输入框）](https://x.com/trq212/status/2039453692592873587) [dotey（泄露并非 bun，而是开发者失误）](https://x.com/dotey/status/2039173976275009799) [bcherny（事故复盘：问题在流程而非个人）](https://x.com/bcherny/status/2039210700657307889) [dotey（可视化解析 Claude Code 原理网站）](https://x.com/dotey/status/2039365135140077765) [Barret_China（基于泄露代码分析记忆模块）](https://x.com/Barret_China/status/2039376926931104153) [vista8（拆出 300+ 提示词片段）](https://x.com/vista8/status/2039157673107849715)
 
-② Meta AI（美国内部测试）切入 AI 购物/电商能力，并被曝部分请求在底层路由到 Gemini 模型：这意味着 Meta 可能加入与 OpenAI、Microsoft、Google、Perplexity 等的「AI+电商」竞争；同时也反映出大厂在模型层面进行多模型/外部模型调用的工程实践。消息来源：[TestingCatalog（AI 购物功能内测）](https://x.com/testingcatalog/status/2028503759857271242) [TestingCatalog（请求路由到 Gemini）](https://x.com/testingcatalog/status/2028503762437071110)
+② **Anthropic 或在研发常驻型 Always-on Agent「Conway」，Claude 产品线可能从 CLI/桌面工具继续走向长期在线代理平台。**  
+爆料称 Anthropic 正在开发名为 **Conway** 的常驻代理方案，可能具备独立 UI、浏览器操作、连接器、Claude Code 联动、Webhook 调用与扩展支持等能力。如果属实，这意味着 Claude 将从“会话式 AI + 编码助手”进一步演化为可持续运行、跨工具编排的长期代理系统。  
+消息来源：[TestingCatalog（Conway 爆料）](https://x.com/testingcatalog/status/2039490365414048182) [TestingCatalog（非愚人节补充说明）](https://x.com/testingcatalog/status/2039490367750279349) [TestingCatalog（Claude Code 桌面新模式线索）](https://x.com/testingcatalog/status/2038762640575434813)
 
-③ Google Gemini 动态：Gemini 3 Pro 下线计划与「Projects」功能再现企业版。1）Gemini 3 Pro 将于下周一（3/9）关闭，官方建议升级到 Gemini 3.1 Pro Preview（称对早期版本反馈点有改进）。2）Gemini Enterprise 被发现正在测试/开发「Projects」功能（是否进入消费者版本未知），用于项目化组织与管理。消息来源：[OfficialLoganK（下线 3 Pro、升级 3.1 Pro Preview）](https://x.com/OfficialLoganK/status/2028603510405697604) [TestingCatalog（Gemini Projects in Enterprise）](https://x.com/testingcatalog/status/2028516292420919747)
-
-④ Microsoft Copilot Tasks 或将加入短信（SMS）支持：可通过短信接收任务更新、并从消息中发起新任务，体现「任务/代理」能力向更自然的通知与入口（Messages）扩展。消息来源：[TestingCatalog](https://x.com/testingcatalog/status/2028588900734636124)
+③ **Z AI 发布 GLM-5V-Turbo，把“视觉编码模型”正式推向产品化，且已快速接入多个实际应用。**  
+1）Z AI 正式发布 **GLM-5V-Turbo**，定位为 Vision Coding Model，强调原生多模态编码能力，可理解图片、视频、设计稿、文档布局等输入，并兼顾纯文本编程能力。  
+2）该模型已上线 **Z AI Chat 和 Coding plans**。  
+3）第三方生态接入速度很快：**TRAE** 已将其作为自定义模型提供，**Tabbit Browser** 也已支持其进行截图分析与网页界面理解。  
+这表明“看图写界面 / 基于视觉参考做前端与代理任务”正在从概念能力转向可直接调用的商用能力。  
+消息来源：[Zai_org（GLM-5V-Turbo 发布）](https://x.com/Zai_org/status/2039371126984360085) [Zai_org（纯文本 coding 能力说明）](https://x.com/Zai_org/status/2039371144340357509) [Zai_org（多模态融合技术说明）](https://x.com/Zai_org/status/2039371149721694639) [TestingCatalog（GLM-5V-Turbo 上线 Z AI 计划）](https://x.com/testingcatalog/status/2039429157717676529) [Trae_ai（TRAE 接入 GLM-5V-Turbo）](https://x.com/Trae_ai/status/2039380056460730451) [TabbitBrowser（Tabbit 接入 GLM-5V-Turbo）](https://x.com/TabbitBrowser/status/2039359108747522345) [e01ai（围绕 GLM-5V-Turbo 的界面探索）](https://x.com/e01ai/status/2039371892487024787)
 
 
 ## 分组提示

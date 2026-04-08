@@ -24,10 +24,6 @@ describe('AIContentService CozeLoop integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...originalEnv };
-    delete process.env.PROXY_HOST;
-    delete process.env.PROXY_PORT;
-    delete process.env.PROXY_USERNAME;
-    delete process.env.PROXY_PASSWORD;
     applicationConfig.aiService = { ...originalAIConfig };
   });
 
@@ -83,12 +79,26 @@ describe('AIContentService CozeLoop integration', () => {
     });
   });
 
-  test('shouldUseProxy should return true when proxy env is set', () => {
+  test('initializeService should ignore proxy env for CozeLoop requests', () => {
     process.env.PROXY_HOST = '127.0.0.1';
     process.env.PROXY_PORT = '7890';
+    process.env.PROXY_USERNAME = 'user';
+    process.env.PROXY_PASSWORD = 'pass';
+    applicationConfig.aiService.cozeBaseUrl = 'https://api.coze.cn';
+    applicationConfig.aiService.cozeToken = 'pat_test_token';
+    applicationConfig.aiService.cozeWorkspaceId = 'workspace_123';
+    applicationConfig.aiService.cozePromptKey = 'daily_report';
     const service = new AIContentService();
 
-    expect(service.shouldUseProxy()).toBe(true);
+    service.initializeService();
+
+    expect(cozeloop.ApiClient).toHaveBeenCalledWith(expect.objectContaining({
+      token: 'pat_test_token',
+      baseURL: 'https://api.coze.cn',
+      axiosOptions: {
+        timeout: applicationConfig.aiService.requestTimeout
+      }
+    }));
   });
 
   test('makeAPIRequest should invoke CozeLoop prompt service', async () => {
