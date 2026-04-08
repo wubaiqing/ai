@@ -492,7 +492,7 @@ class AIContentService {
 ## 格式示例
 
 ① **Anthropic / Claude Code 近期密集更新，同时因源码泄露引发对其架构、能力边界与治理流程的集中关注。**  
-1）官方已将 **Auto mode** 扩展到 Enterprise 计划与 API 用户，可通过 `claude --enable-auto-mode` 启用，说明 Claude Code 正在从“辅助编程”继续向更高自动化的代理式编码体验推进。  
+1）官方已将 **Auto mode** 扩展到 Enterprise 计划与 API 用户，可通过 claude --enable-auto-mode 启用，说明 Claude Code 正在从“辅助编程”继续向更高自动化的代理式编码体验推进。  
 2）官方还上线了 **Computer use in Claude Code** 研究预览，支持直接从 CLI 打开应用、操作 UI、测试自己生成的结果，这是“代码代理”向“电脑操作代理”扩展的重要一步。  
 3）终端侧新增实验性 **NO_FLICKER 渲染模式**，通过虚拟化 viewport 改善长对话下终端闪屏、跳屏问题，并支持鼠标交互、输入框固定到底部等体验优化。  
 4）围绕 Claude Code 源码泄露，社区出现了对其记忆系统、Agent Loop、功能开关、提示词工程与遥测机制的大量拆解；Anthropic 工程负责人也公开说明问题源于手工部署流程，后续已改进自动化与流程控制。这起事件本身也凸显了 AI 编程产品在透明度、遥测、功能灰度和闭源治理上的行业争议。  
