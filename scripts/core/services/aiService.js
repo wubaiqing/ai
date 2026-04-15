@@ -456,68 +456,31 @@ class AIContentService {
     
     const categoriesText = contentCategories.join('、');
     
-    const systemPrompt = `请分析用户提供的推文数据，提取有价值的科技资讯信息，生成一份使用带圆圈数字编号格式的中文简报。
+    const systemPrompt = `你是一名 AI 行业资讯编辑，请基于用户提供的推文数据生成中文简报。
 
-## 分析要求
+## 核心目标
 
-1. **内容筛选**：只选择有价值的${categoriesText}相关内容
+1. 只保留有信息密度和传播价值的${categoriesText}相关内容
+2. 按事件重要性排序，最多保留${maxReportItems}个重点主题
+3. 对同一公司/产品/技术线的相关动态进行合并，减少重复
+4. 输出风格优先“资讯感”，避免公文腔和模板化表达
 
-2. **主题分组**：根据推文内容和关键词进行主题分组，相同公司、产品或技术领域的消息归为一组
+## 写作要求
 
-3. **单独成组**：如果某个主题只有一条消息，可以单独成组
+- 可以灵活组织段落与小标题，不强制固定编号样式
+- 如果原文是英文或其他语言，转写成自然中文
+- 每个主题先给出一句结论，再补充关键信息与影响
+- 允许保留适度观点，但不要编造事实或来源
+- 对不确定信息使用“据披露/据推测”等审慎措辞
 
-4. **合并相关**：如果某个主题有多条相关消息，请合并为一个主题组
+## 事实与来源
 
-5. **重要性排序**：按重要性和影响力排序，最多选择${maxReportItems}条最有价值的信息
+- 消息来源必须使用用户提供的原始推文链接
+- 链接格式保持为 [来源名称](实际链接地址)
+- 同一主题可附多个来源，但只保留最关键的链接
+- 严禁输出用户数据之外的虚构来源`;
 
-6. **优先级**：优先选择技术创新、产品发布、行业动态、重大更新等重要资讯
-
-
-## 格式要求
-
-### 编号格式
-
-- **主要条目**：使用带圆圈的数字编号（① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ 等）
-- **子项目**：如果某个主题有多个子项，使用 1）2）3）格式
-- **段落分隔**：每个编号条目之间添加空行，确保排版清晰
-
-### 内容组织
-
-- **语言统一**：如果内容是英文或其他语言，请翻译成中文
-- **价值筛选**：确保每条信息都有实际价值，避免重复或无意义的内容
-- **详细描述**：每个条目包含详细描述和准确的消息来源，消息来源必须包含原始推文的链接
-- **逻辑清晰**：内容层次分明，易于阅读和理解
-
-
-## 格式示例
-
-① **Anthropic / Claude Code 近期密集更新，同时因源码泄露引发对其架构、能力边界与治理流程的集中关注。**  
-1）官方已将 **Auto mode** 扩展到 Enterprise 计划与 API 用户，可通过 claude --enable-auto-mode 启用，说明 Claude Code 正在从“辅助编程”继续向更高自动化的代理式编码体验推进。  
-2）官方还上线了 **Computer use in Claude Code** 研究预览，支持直接从 CLI 打开应用、操作 UI、测试自己生成的结果，这是“代码代理”向“电脑操作代理”扩展的重要一步。  
-3）终端侧新增实验性 **NO_FLICKER 渲染模式**，通过虚拟化 viewport 改善长对话下终端闪屏、跳屏问题，并支持鼠标交互、输入框固定到底部等体验优化。  
-4）围绕 Claude Code 源码泄露，社区出现了对其记忆系统、Agent Loop、功能开关、提示词工程与遥测机制的大量拆解；Anthropic 工程负责人也公开说明问题源于手工部署流程，后续已改进自动化与流程控制。这起事件本身也凸显了 AI 编程产品在透明度、遥测、功能灰度和闭源治理上的行业争议。  
-消息来源：[ClaudeAI（Auto mode 面向 Enterprise/API）](https://x.com/claudeai/status/2038693742094246032) [ClaudeAI（Claude Code 接入 Computer Use）](https://x.com/claudeai/status/2038663014098899416) [bcherny（NO_FLICKER 模式发布）](https://x.com/bcherny/status/2039421575422980329) [bcherny（虚拟 viewport 渲染原理）](https://x.com/bcherny/status/2039421581907374320) [trq212（重写 renderer、支持鼠标与底部输入框）](https://x.com/trq212/status/2039453692592873587) [dotey（泄露并非 bun，而是开发者失误）](https://x.com/dotey/status/2039173976275009799) [bcherny（事故复盘：问题在流程而非个人）](https://x.com/bcherny/status/2039210700657307889) [dotey（可视化解析 Claude Code 原理网站）](https://x.com/dotey/status/2039365135140077765) [Barret_China（基于泄露代码分析记忆模块）](https://x.com/Barret_China/status/2039376926931104153) [vista8（拆出 300+ 提示词片段）](https://x.com/vista8/status/2039157673107849715)
-
-② **Anthropic 或在研发常驻型 Always-on Agent「Conway」，Claude 产品线可能从 CLI/桌面工具继续走向长期在线代理平台。**  
-爆料称 Anthropic 正在开发名为 **Conway** 的常驻代理方案，可能具备独立 UI、浏览器操作、连接器、Claude Code 联动、Webhook 调用与扩展支持等能力。如果属实，这意味着 Claude 将从“会话式 AI + 编码助手”进一步演化为可持续运行、跨工具编排的长期代理系统。  
-消息来源：[TestingCatalog（Conway 爆料）](https://x.com/testingcatalog/status/2039490365414048182) [TestingCatalog（非愚人节补充说明）](https://x.com/testingcatalog/status/2039490367750279349) [TestingCatalog（Claude Code 桌面新模式线索）](https://x.com/testingcatalog/status/2038762640575434813)
-
-③ **Z AI 发布 GLM-5V-Turbo，把“视觉编码模型”正式推向产品化，且已快速接入多个实际应用。**  
-1）Z AI 正式发布 **GLM-5V-Turbo**，定位为 Vision Coding Model，强调原生多模态编码能力，可理解图片、视频、设计稿、文档布局等输入，并兼顾纯文本编程能力。  
-2）该模型已上线 **Z AI Chat 和 Coding plans**。  
-3）第三方生态接入速度很快：**TRAE** 已将其作为自定义模型提供，**Tabbit Browser** 也已支持其进行截图分析与网页界面理解。  
-这表明“看图写界面 / 基于视觉参考做前端与代理任务”正在从概念能力转向可直接调用的商用能力。  
-消息来源：[Zai_org（GLM-5V-Turbo 发布）](https://x.com/Zai_org/status/2039371126984360085) [Zai_org（纯文本 coding 能力说明）](https://x.com/Zai_org/status/2039371144340357509) [Zai_org（多模态融合技术说明）](https://x.com/Zai_org/status/2039371149721694639) [TestingCatalog（GLM-5V-Turbo 上线 Z AI 计划）](https://x.com/testingcatalog/status/2039429157717676529) [Trae_ai（TRAE 接入 GLM-5V-Turbo）](https://x.com/Trae_ai/status/2039380056460730451) [TabbitBrowser（Tabbit 接入 GLM-5V-Turbo）](https://x.com/TabbitBrowser/status/2039359108747522345) [e01ai（围绕 GLM-5V-Turbo 的界面探索）](https://x.com/e01ai/status/2039371892487024787)
-
-
-## 分组提示
-
-- 相同公司的多个产品发布可以归为一组，使用子编号（1）2）3）格式）
-- 相同技术领域的不同公司动态可以分别成组
-- 关注推文中的关键词，如公司名、产品名、技术术语等
-- 优先合并具有明显关联性的消息`;
-
-    const userPrompt = `请基于以下推文数据生成简报。
+    const userPrompt = `请基于以下推文数据生成一份“AI 资讯风格”的中文简报。
 
 ## 推文数据
 
@@ -525,7 +488,8 @@ ${formattedTweets}
 
 ---
 
-**请严格按照上述 Markdown 格式要求生成简报，确保标题层级清晰、列表格式标准、链接格式统一。特别注意：消息来源必须使用推文数据中提供的实际链接地址，格式为 [来源名称](实际链接地址)。**`;
+请优先保证信息价值和可读性，不要写成过度规范化模板。可使用 Markdown，但以自然阅读体验为准。
+特别注意：消息来源必须使用推文数据中提供的实际链接地址，格式为 [来源名称](实际链接地址)。`;
 
     return {
       systemPrompt,
