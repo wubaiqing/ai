@@ -9,7 +9,7 @@ RUN npm config set registry https://registry.npmmirror.com && \
     npm install -g pnpm && \
     pnpm config set registry https://registry.npmmirror.com
 
-# 安装必要的系统依赖（仅保留 Chromium headless 模式必需的依赖）
+# 安装必要的系统依赖（Debian 中 dnsutils 已提供 dig/nslookup，不能使用 Alpine 的 bind-tools 包名）
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
@@ -19,7 +19,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     iputils-ping \
     dnsutils \
-    bind-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置时区
