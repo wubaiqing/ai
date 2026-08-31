@@ -63,9 +63,20 @@ async function storeTweetDataToSupabase(tweets) {
       Logger.info(`批次 ${Math.floor(i/BATCH_SIZE) + 1}: 新增 ${insertedCount} 条，跳过重复 ${skippedCount} 条`);
       
     } catch (err) {
+      /* --- @ty.aicoding@ --- 开始 */
+      const cause = err.cause || {};
       Logger.error(`批次 ${Math.floor(i/BATCH_SIZE) + 1} 处理异常:`, err.message);
+      Logger.error(`批次 ${Math.floor(i/BATCH_SIZE) + 1} 底层原因:`, {
+        code: cause.code,
+        errno: cause.errno,
+        syscall: cause.syscall,
+        hostname: cause.hostname,
+        address: cause.address,
+        causeMessage: cause.message
+      });
       hasError = true;
-      errorMessage = err.message;
+      errorMessage = cause.code ? `${err.message} (${cause.code})` : err.message;
+      /* --- @ty.aicoding@ --- 结束 */
     }
   }
 
