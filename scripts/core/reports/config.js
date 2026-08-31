@@ -35,14 +35,15 @@ const applicationConfig = {
     tableName: 'tweets'
   },
 
-  // AI 服务配置 - CozeLoop
+  // AI 服务配置
   aiService: {
-    cozeBaseUrl: process.env.COZELOOP_API_BASE_URL || 'https://api.coze.cn',
-    cozeToken: process.env.COZELOOP_TOKEN || '',
-    cozeWorkspaceId: process.env.COZELOOP_WORKSPACE_ID || '',
-    cozePromptKey: process.env.COZELOOP_PROMPT_KEY || '',
-    cozePromptVersion: process.env.COZELOOP_PROMPT_VERSION || '',
-    requestTimeout: 300000, // 5分钟超时
+    // DeepSeek 配置
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
+    deepseekBaseUrl: process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com',
+    deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash',
+
+    // 通用配置
+    requestTimeout: 300000,
     maxTokens: 4096,
     temperature: 0.7
   },
@@ -92,9 +93,7 @@ function validateEnvironmentVariables() {
   const requiredEnvVars = {
     SUPABASE_URL: applicationConfig.database.supabaseUrl,
     SUPABASE_SERVICE_ROLE_KEY: applicationConfig.database.serviceRoleKey,
-    COZELOOP_TOKEN: applicationConfig.aiService.cozeToken,
-    COZELOOP_WORKSPACE_ID: applicationConfig.aiService.cozeWorkspaceId,
-    COZELOOP_PROMPT_KEY: applicationConfig.aiService.cozePromptKey
+    DEEPSEEK_API_KEY: applicationConfig.aiService.deepseekApiKey
   };
 
   const missingVars = [];
