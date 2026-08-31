@@ -1,5 +1,5 @@
 # 后端服务 Dockerfile - Node.js 爬虫服务
-FROM node:20-slim
+FROM node:22-slim
 
 # 配置 Debian 使用中国镜像源
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
