@@ -91,7 +91,8 @@ class AIContentService {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${normalizedApiKey}`
-      }
+      },
+      proxy: false
     });
 
     this.isConfigured = true;
