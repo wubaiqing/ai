@@ -1,13 +1,13 @@
 /**
  * DeepSeek AI 服务测试
- * 用于验证 DeepSeek V4 Flash 集成
+ * 用于验证 DeepSeek 集成（通过 OpenAI SDK）
  */
 
 require('dotenv').config();
 const { aiContentService } = require('../core/services/aiService');
 
 async function testDeepSeekIntegration() {
-  console.log('=== DeepSeek V4 Flash 集成测试 ===\n');
+  console.log('=== DeepSeek 集成测试 ===\n');
 
   try {
     // 1. 验证配置
@@ -23,7 +23,7 @@ async function testDeepSeekIntegration() {
     // 2. 测试简单对话
     console.log('\n2. 测试简单对话...');
     const simpleResult = await aiContentService.generateContent(
-      '用一句话介绍 DeepSeek V4 Flash 模型'
+      '用一句话介绍你自己'
     );
     console.log('AI 响应:', simpleResult.content);
 
@@ -44,7 +44,7 @@ async function testDeepSeekIntegration() {
         published_date: '2026-08-30'
       },
       {
-        content: 'DeepSeek 推出 V4 Flash，价格更便宜，速度更快',
+        content: 'DeepSeek 推出新模型，价格更便宜，速度更快',
         url: 'https://twitter.com/example/2',
         published_date: '2026-08-31'
       }
@@ -57,9 +57,11 @@ async function testDeepSeekIntegration() {
     console.log('\n=== 测试完成 ===');
   } catch (error) {
     console.error('测试失败:', error.message);
+    if (error.status) {
+      console.error('HTTP 状态码:', error.status);
+    }
     console.error(error.stack);
   }
 }
 
 testDeepSeekIntegration();
-

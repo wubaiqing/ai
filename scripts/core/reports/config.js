@@ -1,7 +1,7 @@
 /**
  * 报告生成配置管理模块
  * 负责管理AI简报生成的各种配置参数，包括数据库连接、AI服务、文件操作等配置
- * 
+ *
  * @fileoverview 提供统一的配置管理接口，支持环境变量覆盖和配置验证
  * @author AI Assistant
  * @version 1.0.0
@@ -44,7 +44,6 @@ const applicationConfig = {
 
     // 通用配置
     requestTimeout: 300000,
-    maxTokens: 4096,
     temperature: 0.7
   },
 
